@@ -1,6 +1,7 @@
 using PolityKit.Sim.Core.Events;
 using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Engine;
+using System.Text.Json;
 
 namespace PolityKit.Sim.Tests.Engine;
 
@@ -180,5 +181,95 @@ public sealed class SimulationRunSummaryTests
 
         Assert.Equal("Administrative Load rose between ticks 4 and 7.", change.Breadcrumb);
         Assert.Empty(change.NearbyEvents);
+    }
+
+    [Fact]
+    public void CreateLinksMetricMovementToNearbyShockEvent()
+    {
+        var result = new SimulationRunResult
+        {
+            ScenarioName = "Corruption Scenario",
+            Seed = 123,
+            Ticks = 35,
+            ModelResults =
+            [
+                new ModelRunResult
+                {
+                    ModelName = "Model A",
+                    ModelVersion = "1.0",
+                    Events =
+                    [
+                        new SimulationEvent
+                        {
+                            Tick = 30,
+                            Type = "CorruptionSpike",
+                            Description = "Corruption increased.",
+                            Data =
+                            {
+                                ["severity"] = 0.4,
+                                ["institutionalTrustDelta"] = -20
+                            }
+                        }
+                    ],
+                    Metrics =
+                    [
+                        new MetricResult { Name = "Trust", Tick = 29, Value = 75, Unit = "points" },
+                        new MetricResult { Name = "Trust", Tick = 31, Value = 50, Unit = "points" }
+                    ]
+                }
+            ]
+        };
+
+        var model = Assert.Single(SimulationRunSummary.Create(result).Models);
+        var change = Assert.Single(model.NotableMetricChanges);
+
+        Assert.Equal("Trust dropped after CorruptionSpike at tick 30.", change.Breadcrumb);
+        var linkedEvent = Assert.Single(change.NearbyEvents);
+        Assert.Equal("CorruptionSpike", linkedEvent.Type);
+        Assert.Equal(-20, linkedEvent.Data["institutionalTrustDelta"]);
+    }
+
+    [Fact]
+    public void SummarySerializesInterpretabilityOutput()
+    {
+        var summary = SimulationRunSummary.Create(new SimulationRunResult
+        {
+            ScenarioName = "Scenario A",
+            Seed = 123,
+            Ticks = 3,
+            ModelResults =
+            [
+                new ModelRunResult
+                {
+                    ModelName = "Model A",
+                    ModelVersion = "1.0",
+                    Events =
+                    [
+                        new SimulationEvent
+                        {
+                            Tick = 1,
+                            Type = "AdministrativeOverload",
+                            Description = "Administration overloaded.",
+                            Data = { ["overflow"] = 5 }
+                        }
+                    ],
+                    Metrics =
+                    [
+                        new MetricResult { Name = "Administrative Load", Tick = 0, Value = 0 },
+                        new MetricResult { Name = "Administrative Load", Tick = 2, Value = 5 }
+                    ]
+                }
+            ]
+        });
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(summary));
+        var model = document.RootElement.GetProperty("Models")[0];
+        Assert.Equal(1, model.GetProperty("EventCountsByType").GetProperty("AdministrativeOverload").GetInt32());
+
+        var change = model.GetProperty("NotableMetricChanges")[0];
+        Assert.Equal("Administrative Load", change.GetProperty("Metric").GetString());
+        Assert.Equal("Administrative Load rose after AdministrativeOverload at tick 1.", change.GetProperty("Breadcrumb").GetString());
+        Assert.Equal("AdministrativeOverload", change.GetProperty("NearbyEvents")[0].GetProperty("Type").GetString());
+        Assert.Equal(5, change.GetProperty("NearbyEvents")[0].GetProperty("Data").GetProperty("overflow").GetInt32());
     }
 }
