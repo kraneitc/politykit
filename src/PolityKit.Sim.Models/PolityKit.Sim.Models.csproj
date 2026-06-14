@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PolityKit.Sim.Core\PolityKit.Sim.Core.csproj" />
+  </ItemGroup>
+
 </Project>
