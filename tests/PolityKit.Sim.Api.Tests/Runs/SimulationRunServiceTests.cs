@@ -227,6 +227,73 @@ public sealed class SimulationRunServiceTests
     }
 
     [Fact]
+    public void CreateStressRunsScenarioSeedModelAndParameterCombinations()
+    {
+        var engine = new RecordingSimulationEngine();
+        var store = new InMemoryRunStore();
+        var service = CreateService(engine, store);
+
+        var response = service.CreateStress(new StressSweepRequest
+        {
+            Scenarios = ["service-scenario"],
+            Seeds = [111, 222],
+            Models = ["need-based-allocation", "market-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["fixedWeight"] = 10
+            },
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0, 2.0]
+            }
+        });
+
+        Assert.Equal(8, response.RunCount);
+        Assert.Equal(8, response.Runs.Count);
+        Assert.Equal(8, engine.Requests.Count);
+        Assert.Equal(8, store.List().Count);
+        Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation"], response.Models);
+        Assert.Equal([111, 222], response.Seeds);
+        Assert.NotEmpty(response.BestWorst);
+        Assert.All(response.Runs, run =>
+        {
+            Assert.NotEqual(Guid.Empty, run.Run.Id);
+            Assert.Equal("Service Scenario", run.ScenarioName);
+            Assert.Equal(10, run.Parameters["fixedWeight"]);
+            Assert.Single(run.Run.Models);
+            Assert.Single(run.FinalMetrics);
+        });
+
+        var dimensions = response.Runs
+            .Select(run => (run.Seed, run.Model, Weight: run.Parameters["needPriorityWeight"]))
+            .ToHashSet();
+        Assert.Equal(8, dimensions.Count);
+        Assert.Contains((111, "NeedBasedAllocation", 1.0), dimensions);
+        Assert.Contains((222, "MarketBasedAllocation", 2.0), dimensions);
+    }
+
+    [Fact]
+    public void CreateStressRejectsOverLimitRequest()
+    {
+        var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            service.CreateStress(new StressSweepRequest
+            {
+                Scenarios = ["service-scenario"],
+                Seeds = [1, 2],
+                Models = ["need-based-allocation", "market-based-allocation"],
+                Sweep = new Dictionary<string, IReadOnlyList<double>>
+                {
+                    ["needPriorityWeight"] = [1.0, 2.0]
+                },
+                MaxRuns = 7
+            }));
+
+        Assert.Equal("Stress sweep would create 8 runs; the maximum is 7.", exception.Message);
+    }
+
+    [Fact]
     public void CreateRunRejectsUnknownModel()
     {
         var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());

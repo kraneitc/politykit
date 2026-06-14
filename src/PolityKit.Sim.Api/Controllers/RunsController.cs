@@ -51,6 +51,24 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
         }
     }
 
+    [HttpPost("stress")]
+    public IActionResult CreateStress([FromBody] StressSweepRequest request)
+    {
+        try
+        {
+            return Ok(simulationRunService.CreateStress(request));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Stress sweep request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
     [HttpPost("{id:guid}/rerun")]
     public IActionResult Rerun(Guid id, [FromBody] RerunRequest? request)
     {

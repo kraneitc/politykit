@@ -2,11 +2,14 @@ using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services.Models;
 using PolityKit.Sim.Core.Models;
+using PolityKit.Sim.Core.Scenarios;
 using PolityKit.Sim.Core.Simulation;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
 using PolityKit.Sim.Models;
 using PolityKit.Sim.Scenarios;
+using AnalysisStressSweepRequest = PolityKit.Sim.Analysis.StressSweepRequest;
+using ApiStressSweepRequest = PolityKit.Sim.Api.Contracts.StressSweepRequest;
 
 namespace PolityKit.Sim.Api.Services;
 
@@ -77,6 +80,89 @@ public sealed class SimulationRunService(
         };
     }
 
+    public StressSweepResponse CreateStress(ApiStressSweepRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var requestedScenarios = request.Scenarios is { Count: > 0 }
+            ? request.Scenarios
+            : [scenarioResolver.Resolve(null).Name];
+        var requestedSeeds = request.Seeds is { Count: > 0 }
+            ? request.Seeds
+            : requestedScenarios
+                .Select(scenarioName => scenarioResolver.Resolve(scenarioName).Seed)
+                .Distinct()
+                .ToArray();
+        var requestedModels = request.Models is { Count: > 0 }
+            ? request.Models
+            : modelCatalog.All.Select(model => model.Name).ToArray();
+        var plan = StressSweepAnalysis.BuildPlan(new AnalysisStressSweepRequest
+        {
+            GridName = request.GridName,
+            Scenarios = requestedScenarios,
+            Seeds = requestedSeeds,
+            Models = requestedModels,
+            Parameters = request.Parameters,
+            Sweep = request.Sweep,
+            MaxRuns = request.MaxRuns
+        });
+
+        var runs = plan.Runs.Select(runPlan =>
+        {
+            var scenario = scenarioResolver.Resolve(runPlan.Scenario);
+            var ticks = request.Ticks ?? scenario.Ticks;
+            scenario = scenario.WithSeed(runPlan.Seed).WithTicks(ticks);
+            var model = SelectModels([runPlan.Model]);
+            var storedRun = RunAndStore(scenario, runPlan.Seed, ticks, model, runPlan.Parameters);
+            var finalMetrics = SweepAnalysis.SelectFinalMetrics(storedRun.Result);
+
+            return new
+            {
+                Analysis = new StressSweepRunResult(
+                    runPlan.RunIndex,
+                    null,
+                    storedRun.Id,
+                    storedRun.Result.ScenarioName,
+                    storedRun.Result.Seed,
+                    storedRun.Result.Ticks,
+                    storedRun.Result.ModelResults.Single().ModelName,
+                    runPlan.Parameters,
+                    finalMetrics),
+                Response = new StressSweepRunResponse
+                {
+                    RunIndex = runPlan.RunIndex,
+                    Run = RunMappers.ToSummaryResponse(storedRun),
+                    ScenarioName = storedRun.Result.ScenarioName,
+                    Seed = storedRun.Result.Seed,
+                    Ticks = storedRun.Result.Ticks,
+                    Model = storedRun.Result.ModelResults.Single().ModelName,
+                    Parameters = runPlan.Parameters,
+                    FinalMetrics = RunMappers.ToMetricResponses(finalMetrics)
+                }
+            };
+        }).ToArray();
+
+        return new StressSweepResponse
+        {
+            GridName = plan.GridName,
+            Scenarios = runs.Select(run => run.Analysis.ScenarioName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            Seeds = runs.Select(run => run.Analysis.Seed).Distinct().Order().ToArray(),
+            Ticks = request.Ticks,
+            Models = runs.Select(run => run.Analysis.Model).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            BaseParameters = plan.BaseParameters,
+            Sweep = plan.Sweep,
+            RunCount = runs.Length,
+            Runs = runs.Select(run => run.Response).ToArray(),
+            BestWorst = RunMappers.ToBestWorstResponses(SweepAnalysis.BuildBestWorst(runs
+                .Select(run => new SweepRunReport(
+                    run.Analysis.RunIndex,
+                    null,
+                    run.Analysis.Parameters,
+                    run.Analysis.FinalMetrics))
+                .ToArray()))
+        };
+    }
+
     public StoredRun? Rerun(Guid id, RerunRequest? request)
     {
         var existingRun = runStore.Get(id);
@@ -116,6 +202,16 @@ public sealed class SimulationRunService(
     {
         var scenario = scenarioResolver.Resolve(scenarioName);
         scenario = scenario.WithSeed(seed).WithTicks(ticks);
+        return RunAndStore(scenario, seed, ticks, models, parameters);
+    }
+
+    private StoredRun RunAndStore(
+        ScenarioDefinition scenario,
+        int seed,
+        int ticks,
+        IReadOnlyList<ISystemModel> models,
+        IReadOnlyDictionary<string, double> parameters)
+    {
         var result = simulationEngine.Run(new SimulationRunRequest
         {
             Scenario = scenario,

@@ -158,6 +158,79 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateStressReturnsRunSummaryForEachStressRun()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var request = new StressSweepRequest
+        {
+            GridName = "endpoint-grid",
+            Scenarios = ["village-food-crisis"],
+            Seeds = [333, 444],
+            Ticks = 4,
+            Models = ["need-based-allocation", "market-based-allocation"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0]
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var stress = await response.Content.ReadFromJsonAsync<StressSweepResponse>();
+        Assert.NotNull(stress);
+        Assert.Equal("endpoint-grid", stress.GridName);
+        Assert.Equal(4, stress.RunCount);
+        Assert.Equal(4, stress.Runs.Count);
+        Assert.Equal(["Village Food Crisis"], stress.Scenarios);
+        Assert.Equal([333, 444], stress.Seeds);
+        Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation"], stress.Models);
+        Assert.NotEmpty(stress.BestWorst);
+        Assert.All(stress.Runs, run =>
+        {
+            Assert.NotEqual(Guid.Empty, run.Run.Id);
+            Assert.Equal("Village Food Crisis", run.ScenarioName);
+            Assert.Equal(4, run.Ticks);
+            Assert.Single(run.Run.Models);
+            Assert.NotEmpty(run.FinalMetrics);
+        });
+
+        var runs = await client.GetFromJsonAsync<RunSummaryResponse[]>("/api/runs");
+        Assert.NotNull(runs);
+        Assert.Equal(4, runs.Length);
+    }
+
+    [Fact]
+    public async Task CreateStressOverLimitReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var request = new StressSweepRequest
+        {
+            Scenarios = ["village-food-crisis"],
+            Seeds = [1, 2],
+            Models = ["need-based-allocation", "market-based-allocation"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0, 2.0]
+            },
+            MaxRuns = 7
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Stress sweep request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Stress sweep would create 8 runs; the maximum is 7.", problem.Detail);
+    }
+
+    [Fact]
     public async Task GetRunsReturnsCreatedRunsNewestFirst()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
