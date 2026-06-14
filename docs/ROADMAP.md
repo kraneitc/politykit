@@ -365,10 +365,10 @@ Already built:
 - Model parameters exposed through CLI/API run requests.
 - Basic run summaries with final per-model metric values.
 - Event log output through CLI `events.jsonl` and API run event endpoints.
+- Formal scenario JSON schema.
 
 Remaining scope:
 
-- Formal scenario JSON schema.
 - Scenario authoring documentation that explains fields, validation rules, and supported shock types.
 - Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
 - More detailed trust and backlog behavior.

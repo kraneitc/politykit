@@ -36,7 +36,6 @@ Still early / not built yet:
 - A richer CLI command surface beyond running simulations and listing models.
 - Persistent run storage beyond the in-memory API store.
 - Frontend dashboards or visualization tools.
-- A formal scenario JSON schema file.
 - Real-world calibration or policy-grade validation. The models remain intentionally simplified.
 
 ## Repository Layout
@@ -48,6 +47,7 @@ PolityKit/
   LICENSE
   docs/
     ROADMAP.md
+    scenario.schema.json
   examples/
     README.md
     corruption-stress.json
@@ -344,6 +344,8 @@ Example JSON scenarios live in `examples/`:
 - `medicine-shortage.json`
 - `housing-displacement.json`
 - `corruption-stress.json`
+
+The formal scenario schema lives at `docs/scenario.schema.json`.
 
 Each scenario includes:
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://politykit.org/schemas/scenario.schema.json",
+  "title": "PolityKit Scenario",
+  "description": "A PolityKit simulation scenario with starting conditions and scheduled shocks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "ticks",
+    "initialPopulation",
+    "initialResources"
+  ],
+  "properties": {
+    "name": {
+      "description": "Human-readable scenario name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "seed": {
+      "description": "Optional deterministic random seed for the scenario. CLI and API requests may override this value.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "ticks": {
+      "description": "Number of ticks to simulate. Shock ticks must be within 0 and ticks - 1.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "initialPopulation": {
+      "description": "Number of citizens generated when the scenario starts.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "initialResources": {
+      "$ref": "#/$defs/resourcePool"
+    },
+    "shocks": {
+      "description": "Scheduled shocks applied before model decisions on their tick.",
+      "type": "array",
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/shock"
+      }
+    }
+  },
+  "$defs": {
+    "resourcePool": {
+      "description": "Starting resources available to each model run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "food",
+        "medicine",
+        "housing",
+        "adminCapacity",
+        "productionCapacity"
+      ],
+      "properties": {
+        "food": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "medicine": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "housing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "adminCapacity": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "productionCapacity": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "shock": {
+      "description": "A scheduled event that changes world conditions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "type",
+        "severity"
+      ],
+      "properties": {
+        "tick": {
+          "description": "Zero-based tick on which the shock is applied. Must be less than the scenario ticks value.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "description": "Shock type. Built-in handled values include CropFailure, MedicineShortage, HousingLoss, AdministrativeOverload, AdminLoss, and CorruptionSpike. Custom nonblank values are allowed and use the default stability-impact behavior.",
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "description": "Shock severity, where 0 has no effect and 1 is maximum severity.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "parameters": {
+          "description": "Optional shock-specific parameter bag reserved for custom or future shock handlers.",
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      }
+    }
+  }
+}
