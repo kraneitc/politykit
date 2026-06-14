@@ -32,7 +32,15 @@ public sealed class DefaultShockHandlerTests
 
         Assert.Equal(75, world.Resources.Food);
         Assert.Equal(0.75, world.Environment.FoodProductionMultiplier);
-        Assert.Contains(world.Events, simulationEvent => simulationEvent.Type == "CropFailure");
+        var simEvent = Assert.Single(world.Events);
+        Assert.Equal("CropFailure", simEvent.Type);
+        Assert.Equal("Food", simEvent.Data["affectedResource"]);
+        Assert.Equal(100, simEvent.Data["resourceBefore"]);
+        Assert.Equal(75, simEvent.Data["resourceAfter"]);
+        Assert.Equal(-25, simEvent.Data["resourceDelta"]);
+        Assert.Equal(25, simEvent.Data["resourceReduction"]);
+        Assert.Equal(1.0, simEvent.Data["foodProductionMultiplierBefore"]);
+        Assert.Equal(0.75, simEvent.Data["foodProductionMultiplierAfter"]);
     }
 
     [Fact]
@@ -53,6 +61,15 @@ public sealed class DefaultShockHandlerTests
 
         Assert.Equal(10, world.Resources.AdminCapacity);
         Assert.Equal(5, world.Institutions.AdministrativeLoad);
+
+        var simEvent = Assert.Single(world.Events);
+        Assert.Equal("AdminCapacity", simEvent.Data["affectedResource"]);
+        Assert.Equal(20, simEvent.Data["adminCapacityBefore"]);
+        Assert.Equal(10, simEvent.Data["adminCapacityAfter"]);
+        Assert.Equal(-10, simEvent.Data["adminCapacityDelta"]);
+        Assert.Equal(0, simEvent.Data["administrativeLoadBefore"]);
+        Assert.Equal(5, simEvent.Data["administrativeLoadAfter"]);
+        Assert.Equal(5, simEvent.Data["administrativeLoadDelta"]);
     }
 
     [Fact]
@@ -76,6 +93,14 @@ public sealed class DefaultShockHandlerTests
 
         Assert.Equal(1.0, world.Institutions.Corruption);
         Assert.Equal(0, world.Institutions.Trust);
+
+        var simEvent = Assert.Single(world.Events);
+        Assert.Equal(0.8, simEvent.Data["corruptionBefore"]);
+        Assert.Equal(1.0, simEvent.Data["corruptionAfter"]);
+        Assert.Equal(0.2, (double)simEvent.Data["corruptionDelta"], precision: 10);
+        Assert.Equal(40, simEvent.Data["institutionalTrustBefore"]);
+        Assert.Equal(0, simEvent.Data["institutionalTrustAfter"]);
+        Assert.Equal(-40, simEvent.Data["institutionalTrustDelta"]);
     }
 
     [Fact]

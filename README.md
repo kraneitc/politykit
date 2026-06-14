@@ -223,7 +223,7 @@ After a run, inspect:
 
 - `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
 - `metrics.csv` for metric values by tick.
-- `events.jsonl` for the event stream.
+- `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
 - `citizens-final.csv` for final citizen state.
 - `config.json` for the scenario, seed, models, metrics, and parameters used.
 

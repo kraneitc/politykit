@@ -369,12 +369,13 @@ Already built:
 - Scenario authoring documentation for fields, validation rules, and supported shock types.
 - Summary output that links notable metric changes to nearby shocks and events with simple causal breadcrumbs.
 - Tests for summary interpretation.
+- Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
+- Tests for richer event fields.
 
 Remaining scope:
 
-- Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
 - More detailed trust and backlog behavior.
-- Tests for schema validity and richer event fields.
+- Tests for schema validity.
 
 Success criteria:
 

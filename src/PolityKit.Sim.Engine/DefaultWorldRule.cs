@@ -33,7 +33,12 @@ public sealed class DefaultWorldRule : IWorldRule
                 continue;
             }
 
+            var resourceBefore = world.Resources.Get(allocation.Resource) + allocation.Amount;
+            var needBefore = NeedForResource(citizen, allocation.Resource);
+            var totalNeedBefore = TotalNeed(citizen);
             ReduceNeed(citizen, allocation.Resource, allocation.Amount);
+            var needAfter = NeedForResource(citizen, allocation.Resource);
+            var totalNeedAfter = TotalNeed(citizen);
 
             world.Events.Add(new SimulationEvent
             {
@@ -43,8 +48,19 @@ public sealed class DefaultWorldRule : IWorldRule
                 Data =
                 {
                     ["citizenId"] = citizen.Id,
+                    ["affectedResource"] = allocation.Resource.ToString(),
                     ["resource"] = allocation.Resource.ToString(),
                     ["amount"] = allocation.Amount,
+                    ["priority"] = allocation.Priority,
+                    ["resourceBefore"] = resourceBefore,
+                    ["resourceAfter"] = world.Resources.Get(allocation.Resource),
+                    ["resourceDelta"] = world.Resources.Get(allocation.Resource) - resourceBefore,
+                    ["needBefore"] = needBefore,
+                    ["needAfter"] = needAfter,
+                    ["needDelta"] = needAfter - needBefore,
+                    ["citizenTotalNeedBefore"] = totalNeedBefore,
+                    ["citizenTotalNeedAfter"] = totalNeedAfter,
+                    ["citizenTotalNeedDelta"] = totalNeedAfter - totalNeedBefore,
                     ["reason"] = allocation.Reason
                 }
             });
@@ -74,6 +90,7 @@ public sealed class DefaultWorldRule : IWorldRule
     {
         foreach (var action in decision.InstitutionalActions)
         {
+            var administrativeLoadBefore = world.Institutions.AdministrativeLoad;
             world.Institutions.AdministrativeLoad += Math.Max(0, action.AdministrativeCost);
             world.Events.Add(new SimulationEvent
             {
@@ -82,7 +99,11 @@ public sealed class DefaultWorldRule : IWorldRule
                 Description = action.Description,
                 Data =
                 {
-                    ["administrativeCost"] = action.AdministrativeCost
+                    ["actionType"] = action.Type,
+                    ["administrativeCost"] = action.AdministrativeCost,
+                    ["administrativeLoadBefore"] = administrativeLoadBefore,
+                    ["administrativeLoadAfter"] = world.Institutions.AdministrativeLoad,
+                    ["administrativeLoadDelta"] = world.Institutions.AdministrativeLoad - administrativeLoadBefore
                 }
             });
         }
@@ -90,21 +111,22 @@ public sealed class DefaultWorldRule : IWorldRule
 
     private static void ApplyUnmetNeedEffects(WorldState world)
     {
-        var unmetNeed = world.Population.Citizens.Sum(citizen => citizen.FoodNeed + citizen.HealthNeed + citizen.HousingNeed);
+        var citizensWithUnmetNeed = world.Population.Citizens
+            .Where(citizen => citizen.FoodNeed + citizen.HealthNeed + citizen.HousingNeed > 0)
+            .ToArray();
+        var unmetNeed = citizensWithUnmetNeed.Sum(citizen => citizen.FoodNeed + citizen.HealthNeed + citizen.HousingNeed);
         if (unmetNeed == 0)
         {
             return;
         }
 
         var trustPenalty = Math.Min(10, Math.Max(1, unmetNeed / Math.Max(1, world.Population.Count)));
+        var institutionalTrustBefore = world.Institutions.Trust;
         world.Institutions.Trust = Math.Max(0, world.Institutions.Trust - trustPenalty);
 
-        foreach (var citizen in world.Population.Citizens)
+        foreach (var citizen in citizensWithUnmetNeed)
         {
-            if (citizen.FoodNeed + citizen.HealthNeed + citizen.HousingNeed > 0)
-            {
-                citizen.TrustInSystem = Math.Max(0, citizen.TrustInSystem - trustPenalty);
-            }
+            citizen.TrustInSystem = Math.Max(0, citizen.TrustInSystem - trustPenalty);
         }
 
         world.Events.Add(new SimulationEvent
@@ -115,7 +137,17 @@ public sealed class DefaultWorldRule : IWorldRule
             Data =
             {
                 ["unmetNeed"] = unmetNeed,
-                ["trustPenalty"] = trustPenalty
+                ["affectedCitizenCount"] = citizensWithUnmetNeed.Length,
+                ["populationCount"] = world.Population.Count,
+                ["averageUnmetNeed"] = world.Population.Count == 0 ? 0 : (double)unmetNeed / world.Population.Count,
+                ["foodNeed"] = citizensWithUnmetNeed.Sum(citizen => citizen.FoodNeed),
+                ["healthNeed"] = citizensWithUnmetNeed.Sum(citizen => citizen.HealthNeed),
+                ["housingNeed"] = citizensWithUnmetNeed.Sum(citizen => citizen.HousingNeed),
+                ["trustPenalty"] = trustPenalty,
+                ["institutionalTrustBefore"] = institutionalTrustBefore,
+                ["institutionalTrustAfter"] = world.Institutions.Trust,
+                ["institutionalTrustDelta"] = world.Institutions.Trust - institutionalTrustBefore,
+                ["citizenTrustDelta"] = -trustPenalty
             }
         });
     }
@@ -126,6 +158,8 @@ public sealed class DefaultWorldRule : IWorldRule
         if (world.Institutions.AdministrativeLoad > capacity)
         {
             var overflow = world.Institutions.AdministrativeLoad - capacity;
+            var backlogBefore = world.Institutions.AppealBacklog;
+            var institutionalTrustBefore = world.Institutions.Trust;
             world.Institutions.AppealBacklog += overflow;
             world.Institutions.Trust = Math.Max(0, world.Institutions.Trust - Math.Min(5, overflow));
 
@@ -138,7 +172,13 @@ public sealed class DefaultWorldRule : IWorldRule
                 {
                     ["capacity"] = capacity,
                     ["load"] = world.Institutions.AdministrativeLoad,
-                    ["overflow"] = overflow
+                    ["overflow"] = overflow,
+                    ["backlogBefore"] = backlogBefore,
+                    ["backlogAfter"] = world.Institutions.AppealBacklog,
+                    ["backlogDelta"] = world.Institutions.AppealBacklog - backlogBefore,
+                    ["institutionalTrustBefore"] = institutionalTrustBefore,
+                    ["institutionalTrustAfter"] = world.Institutions.Trust,
+                    ["institutionalTrustDelta"] = world.Institutions.Trust - institutionalTrustBefore
                 }
             });
         }
@@ -160,5 +200,21 @@ public sealed class DefaultWorldRule : IWorldRule
                 citizen.HousingNeed = Math.Max(0, citizen.HousingNeed - amount);
                 break;
         }
+    }
+
+    private static int NeedForResource(Citizen citizen, ResourceKind resource)
+    {
+        return resource switch
+        {
+            ResourceKind.Food => citizen.FoodNeed,
+            ResourceKind.Medicine => citizen.HealthNeed,
+            ResourceKind.Housing => citizen.HousingNeed,
+            _ => 0
+        };
+    }
+
+    private static int TotalNeed(Citizen citizen)
+    {
+        return citizen.FoodNeed + citizen.HealthNeed + citizen.HousingNeed;
     }
 }

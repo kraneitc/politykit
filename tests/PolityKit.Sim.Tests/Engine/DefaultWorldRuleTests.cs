@@ -53,9 +53,19 @@ public sealed class DefaultWorldRuleTests
         Assert.Equal(5, lowPriorityCitizen.FoodNeed);
         Assert.Equal(0, highPriorityCitizen.FoodNeed);
         Assert.Equal(0, world.Resources.Food);
-        Assert.Contains(world.Events, simulationEvent =>
-            simulationEvent.Type == "ResourceAllocated"
-            && Equals(simulationEvent.Data["citizenId"], highPriorityCitizen.Id));
+        var allocationEvent = world.Events.Single(simulationEvent => simulationEvent.Type == "ResourceAllocated");
+        Assert.Equal(highPriorityCitizen.Id, allocationEvent.Data["citizenId"]);
+        Assert.Equal("Food", allocationEvent.Data["affectedResource"]);
+        Assert.Equal(5, allocationEvent.Data["amount"]);
+        Assert.Equal(10.0, allocationEvent.Data["priority"]);
+        Assert.Equal(5, allocationEvent.Data["resourceBefore"]);
+        Assert.Equal(0, allocationEvent.Data["resourceAfter"]);
+        Assert.Equal(-5, allocationEvent.Data["resourceDelta"]);
+        Assert.Equal(5, allocationEvent.Data["needBefore"]);
+        Assert.Equal(0, allocationEvent.Data["needAfter"]);
+        Assert.Equal(-5, allocationEvent.Data["needDelta"]);
+        Assert.Equal(5, allocationEvent.Data["citizenTotalNeedBefore"]);
+        Assert.Equal(0, allocationEvent.Data["citizenTotalNeedAfter"]);
     }
 
     [Fact]
@@ -133,7 +143,12 @@ public sealed class DefaultWorldRuleTests
         rule.Apply(world, decision);
 
         Assert.Contains(world.Events, simulationEvent => simulationEvent.Type == "PolicyChanged");
-        Assert.Contains(world.Events, simulationEvent => simulationEvent.Type == "AppealReview");
+        var actionEvent = world.Events.Single(simulationEvent => simulationEvent.Type == "AppealReview");
+        Assert.Equal("AppealReview", actionEvent.Data["actionType"]);
+        Assert.Equal(3, actionEvent.Data["administrativeCost"]);
+        Assert.Equal(0, actionEvent.Data["administrativeLoadBefore"]);
+        Assert.Equal(3, actionEvent.Data["administrativeLoadAfter"]);
+        Assert.Equal(3, actionEvent.Data["administrativeLoadDelta"]);
         Assert.Equal(0, world.Institutions.AdministrativeLoad);
     }
 
@@ -158,7 +173,18 @@ public sealed class DefaultWorldRuleTests
 
         Assert.Equal(64, world.Institutions.Trust);
         Assert.Equal(74, citizen.TrustInSystem);
-        Assert.Contains(world.Events, simulationEvent => simulationEvent.Type == "UnmetNeeds");
+        var unmetNeedsEvent = world.Events.Single(simulationEvent => simulationEvent.Type == "UnmetNeeds");
+        Assert.Equal(6, unmetNeedsEvent.Data["unmetNeed"]);
+        Assert.Equal(1, unmetNeedsEvent.Data["affectedCitizenCount"]);
+        Assert.Equal(1, unmetNeedsEvent.Data["populationCount"]);
+        Assert.Equal(6.0, unmetNeedsEvent.Data["averageUnmetNeed"]);
+        Assert.Equal(4, unmetNeedsEvent.Data["foodNeed"]);
+        Assert.Equal(2, unmetNeedsEvent.Data["healthNeed"]);
+        Assert.Equal(0, unmetNeedsEvent.Data["housingNeed"]);
+        Assert.Equal(70, unmetNeedsEvent.Data["institutionalTrustBefore"]);
+        Assert.Equal(64, unmetNeedsEvent.Data["institutionalTrustAfter"]);
+        Assert.Equal(-6, unmetNeedsEvent.Data["institutionalTrustDelta"]);
+        Assert.Equal(-6, unmetNeedsEvent.Data["citizenTrustDelta"]);
     }
 
     [Fact]
@@ -191,6 +217,15 @@ public sealed class DefaultWorldRuleTests
         Assert.Equal(5, world.Institutions.AppealBacklog);
         Assert.Equal(65, world.Institutions.Trust);
         Assert.Equal(0, world.Institutions.AdministrativeLoad);
-        Assert.Contains(world.Events, simulationEvent => simulationEvent.Type == "AdministrativeBacklog");
+        var backlogEvent = world.Events.Single(simulationEvent => simulationEvent.Type == "AdministrativeBacklog");
+        Assert.Equal(3, backlogEvent.Data["capacity"]);
+        Assert.Equal(8, backlogEvent.Data["load"]);
+        Assert.Equal(5, backlogEvent.Data["overflow"]);
+        Assert.Equal(0, backlogEvent.Data["backlogBefore"]);
+        Assert.Equal(5, backlogEvent.Data["backlogAfter"]);
+        Assert.Equal(5, backlogEvent.Data["backlogDelta"]);
+        Assert.Equal(70, backlogEvent.Data["institutionalTrustBefore"]);
+        Assert.Equal(65, backlogEvent.Data["institutionalTrustAfter"]);
+        Assert.Equal(-5, backlogEvent.Data["institutionalTrustDelta"]);
     }
 }
