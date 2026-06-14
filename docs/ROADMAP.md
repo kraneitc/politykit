@@ -1,8 +1,8 @@
 # PolityKit Roadmap
 
-PolityKit is a governance and allocation simulation framework. The repository is currently scaffolded as a .NET 10 solution, with project boundaries in place but no implemented simulation behavior yet.
+PolityKit is a governance and allocation simulation framework. The repository is now past the initial scaffold: it includes a deterministic simulation engine, starter allocation models, metrics, scenarios, CLI output, an API surface, and automated tests.
 
-This roadmap is written from the current scaffold forward. It distinguishes what exists now from the planned simulation architecture.
+This roadmap tracks what exists now, what remains for the active interpretability milestone, and the planned direction toward a public framework release.
 
 ## As-Built Baseline
 
@@ -16,6 +16,10 @@ PolityKit/
   docs/
     ROADMAP.md
   examples/
+    corruption-stress.json
+    housing-displacement.json
+    medicine-shortage.json
+    village-food-crisis.json
   src/
     PolityKit.Sim.Api/
     PolityKit.Sim.Cli/
@@ -25,14 +29,21 @@ PolityKit/
     PolityKit.Sim.Models/
     PolityKit.Sim.Scenarios/
   tests/
+    PolityKit.Sim.Api.Tests/
+    PolityKit.Sim.Tests/
 ```
 
 Current implementation state:
 
-- `PolityKit.Sim.Api` is an ASP.NET Core scaffold with the default weather forecast endpoint.
-- `PolityKit.Sim.Cli` is a console scaffold that prints "Hello, World!".
-- `PolityKit.Sim.Core`, `PolityKit.Sim.Engine`, `PolityKit.Sim.Metrics`, `PolityKit.Sim.Models`, and `PolityKit.Sim.Scenarios` are placeholder class libraries.
-- `examples/` and `tests/` exist as empty top-level folders.
+- `PolityKit.Sim.Core` contains world state, citizens, resources, events, metrics, scenarios, system decisions, model manifests, and seeded random contracts.
+- `PolityKit.Sim.Engine` contains deterministic world creation, shock handling, tick execution, world-rule application, and per-model run results.
+- `PolityKit.Sim.Models` contains three starter allocation models: `NeedBasedAllocation`, `MarketBasedAllocation`, and `HierarchyBasedAllocation`.
+- `PolityKit.Sim.Metrics` contains five starter metrics: needs met, inequality, trust, severe failures, and administrative load.
+- `PolityKit.Sim.Scenarios` contains built-in scenarios, JSON loading, scenario name resolution, cloning helpers, and validation.
+- `PolityKit.Sim.Cli` can list models and run simulations that emit `config.json`, `metrics.csv`, `events.jsonl`, `citizens-final.csv`, and `summary.json`.
+- `PolityKit.Sim.Api` exposes models, metrics, scenarios, and in-memory simulation runs through HTTP endpoints.
+- `examples/` contains JSON scenario files for food, medicine, housing, and corruption stress cases.
+- `tests/` contains unit and API integration coverage for the current stack.
 - The solution targets .NET 10.
 - The project is licensed under Apache 2.0.
 
@@ -48,9 +59,9 @@ A useful framing:
 
 ## Architectural Direction
 
-The scaffold already suggests the main boundaries. The first implementation should preserve these responsibilities:
+The current implementation preserves these main boundaries:
 
-| Project | Planned Responsibility |
+| Project | Current Responsibility |
 |---|---|
 | `PolityKit.Sim.Core` | Domain primitives, shared contracts, world state, citizens, resources, decisions, events, and configuration types. |
 | `PolityKit.Sim.Engine` | Deterministic simulation loop, tick orchestration, world-rule application, shock handling, and run lifecycle. |
@@ -129,9 +140,9 @@ Better questions:
 - Which groups are affected first?
 - Which assumptions drive the result?
 
-## Target Core Types
+## Current Core Types
 
-The first implementation should start with simple, inspectable types.
+The first implementation uses simple, inspectable types. The examples below show the shape of the core contracts; the source files are the authoritative definitions.
 
 ### World State
 
@@ -288,7 +299,7 @@ Files are easy to inspect, compare, commit as examples, and consume from later d
 
 ### Version 0.0 - Scaffold
 
-Status: mostly complete.
+Status: complete.
 
 Scope:
 
@@ -298,12 +309,14 @@ Scope:
 - Establish README and roadmap.
 - Choose license.
 
-Remaining cleanup:
+Completed cleanup:
 
-- Replace default placeholder classes with named domain files as implementation begins.
-- Remove default weather forecast API sample when real API endpoints exist.
+- Placeholder classes have been replaced with named domain files.
+- The default weather forecast API sample has been replaced with PolityKit endpoints.
 
 ### Version 0.1 - Smallest Useful Simulation
+
+Status: complete.
 
 Goal: prove the basic concept from the CLI.
 
@@ -337,25 +350,40 @@ Success criteria:
 
 ### Version 0.2 - Better Interpretability
 
+Status: active.
+
 Goal: make results explainable.
 
-Features:
+Already built:
 
-- Richer event log.
 - Model manifests.
 - Scenario validation.
-- More detailed trust and backlog behavior.
 - Additional scenarios:
   - Medicine shortage.
-  - Administrative overload.
-- Summary output that links metric changes to relevant events.
+  - Housing displacement.
+  - Corruption stress.
+- Model parameters exposed through CLI/API run requests.
+- Basic run summaries with final per-model metric values.
+- Event log output through CLI `events.jsonl` and API run event endpoints.
+
+Remaining scope:
+
+- Formal scenario JSON schema.
+- Scenario authoring documentation that explains fields, validation rules, and supported shock types.
+- Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
+- More detailed trust and backlog behavior.
+- Summary output that links notable metric changes to nearby shocks and events.
+- Tests for schema validity, richer event fields, and interpretability summaries.
 
 Success criteria:
 
 - A user can inspect a metric change and identify likely causes.
 - Model assumptions are visible without reading code.
+- Scenario files can be authored against a documented schema.
 
 ### Version 0.3 - Contribution-Friendly Models
+
+Status: planned.
 
 Goal: make it easy for contributors to add models.
 
@@ -375,14 +403,21 @@ Success criteria:
 
 ### Version 0.4 - API And Dashboard Foundation
 
+Status: started.
+
 Goal: expose completed runs for tools and dashboards.
 
-Features:
+Already built:
 
 - Replace default API sample with PolityKit endpoints.
 - API endpoint to list available runs.
 - API endpoint to retrieve run summaries.
 - API endpoint to retrieve metrics and events.
+
+Remaining scope:
+
+- File-backed or otherwise persistent run storage.
+- API support for inspecting completed CLI run bundles.
 - Basic dashboard or dashboard-ready JSON output.
 
 Success criteria:
@@ -478,20 +513,17 @@ Success criteria:
 - Runs are reproducible and inspectable.
 - The project clearly communicates its limitations and purpose.
 
-## Recommended Initial Build Sequence
+## Recommended v0.2 Build Sequence
 
-1. Replace placeholder `Class1.cs` files with domain-oriented files.
-2. Add core domain contracts in `PolityKit.Sim.Core`.
-3. Add a deterministic random source and simulation context.
-4. Implement a minimal engine loop.
-5. Add one tiny hard-coded scenario to prove the loop.
-6. Move the scenario into JSON loading under `PolityKit.Sim.Scenarios`.
-7. Implement `NeedBasedAllocation`.
-8. Add metrics and file outputs.
-9. Add `MarketBasedAllocation` and `HierarchyBasedAllocation`.
-10. Wire the CLI to run a scenario and emit a run folder.
-11. Add tests for reproducibility, scenario validation, model behavior, and metric calculations.
-12. Remove the API weather forecast sample and replace it with run-inspection endpoints.
+1. Add a formal scenario JSON schema under `docs/`.
+2. Add scenario authoring documentation that covers required fields, optional fields, validation rules, and supported shock types.
+3. Review event payloads and add useful context fields where interpretability is currently weak.
+4. Add an interpretability layer for run summaries that detects notable metric changes.
+5. Link notable metric changes to nearby shocks, severe events, administrative pressure, and resource allocation events.
+6. Include the interpretability output in CLI `summary.json`.
+7. Expose the same interpreted summary shape through the API run detail response if it fits the current contract cleanly.
+8. Add tests for schema validity, example scenario compatibility, event payload expectations, and summary interpretation.
+9. Update `README.md` so the current status and usage docs describe the completed v0.2 behavior.
 
 ## Key Risks
 
