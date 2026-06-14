@@ -47,6 +47,7 @@ PolityKit/
   LICENSE
   docs/
     ROADMAP.md
+    scenarios.md
     scenario.schema.json
   examples/
     README.md
@@ -345,7 +346,7 @@ Example JSON scenarios live in `examples/`:
 - `housing-displacement.json`
 - `corruption-stress.json`
 
-The formal scenario schema lives at `docs/scenario.schema.json`.
+The scenario guide lives at `docs/scenarios.md`, and the formal schema lives at `docs/scenario.schema.json`.
 
 Each scenario includes:
 
