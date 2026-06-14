@@ -14,7 +14,13 @@ PolityKit/
   README.md
   LICENSE
   docs/
+    add-metric.md
+    add-model.md
+    add-scenario.md
+    contributing.md
     ROADMAP.md
+    scenarios.md
+    scenario.schema.json
   examples/
     corruption-stress.json
     housing-displacement.json
@@ -386,16 +392,20 @@ Success criteria:
 
 ### Version 0.3 - Contribution-Friendly Models
 
-Status: planned.
+Status: started.
 
 Goal: make it easy for contributors to add models.
 
-Features:
+Already built:
 
 - Stable model interface.
 - Documentation for adding models.
 - Documentation for adding metrics.
 - Documentation for adding scenarios.
+- Contributor guide.
+
+Remaining scope:
+
 - Example custom model.
 - Validation for model manifests.
 - Tests that demonstrate model contract expectations.

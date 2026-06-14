@@ -47,6 +47,10 @@ PolityKit/
   README.md
   LICENSE
   docs/
+    add-metric.md
+    add-model.md
+    add-scenario.md
+    contributing.md
     ROADMAP.md
     scenarios.md
     scenario.schema.json
@@ -499,6 +503,14 @@ Useful contribution areas include:
 - Tests for new behavior.
 
 The project should welcome disagreement by turning it into inspectable model-building: fork the model, change the assumptions, run the same scenario, and compare the results.
+
+Contributor docs:
+
+- [Contributing guide](docs/contributing.md)
+- [How to add a model](docs/add-model.md)
+- [How to add a metric](docs/add-metric.md)
+- [How to add a scenario](docs/add-scenario.md)
+- [Scenario format reference](docs/scenarios.md)
 
 ## Roadmap
 
