@@ -221,7 +221,7 @@ dotnet run --project src/PolityKit.Sim.Cli -- run \
 
 After a run, inspect:
 
-- `summary.json` for final per-model metrics, event counts, and notable metric changes with nearby events.
+- `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
 - `metrics.csv` for metric values by tick.
 - `events.jsonl` for the event stream.
 - `citizens-final.csv` for final citizen state.

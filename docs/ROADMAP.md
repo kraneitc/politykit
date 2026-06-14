@@ -367,7 +367,7 @@ Already built:
 - Event log output through CLI `events.jsonl` and API run event endpoints.
 - Formal scenario JSON schema.
 - Scenario authoring documentation for fields, validation rules, and supported shock types.
-- Summary output that links notable metric changes to nearby shocks and events.
+- Summary output that links notable metric changes to nearby shocks and events with simple causal breadcrumbs.
 - Tests for summary interpretation.
 
 Remaining scope:

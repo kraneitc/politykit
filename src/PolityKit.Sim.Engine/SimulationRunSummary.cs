@@ -98,6 +98,9 @@ public sealed class SimulationRunSummary
         }
 
         var delta = current.Value - previous.Value;
+        var nearbyEvents = SelectNearbyEvents(events, current.Tick);
+        var direction = delta > 0 ? "increased" : "decreased";
+
         return new MetricChangeSummary
         {
             Metric = current.Name,
@@ -107,9 +110,10 @@ public sealed class SimulationRunSummary
             Value = current.Value,
             Change = delta,
             AbsoluteChange = Math.Abs(delta),
-            Direction = delta > 0 ? "increased" : "decreased",
+            Direction = direction,
             Unit = current.Unit,
-            NearbyEvents = SelectNearbyEvents(events, current.Tick)
+            Breadcrumb = BuildBreadcrumb(current.Name, direction, previous.Tick, current.Tick, nearbyEvents),
+            NearbyEvents = nearbyEvents
         };
     }
 
@@ -152,6 +156,24 @@ public sealed class SimulationRunSummary
     private static bool IsInterpretabilityEvent(SimulationEvent simEvent)
     {
         return simEvent.Type != "ResourceAllocated";
+    }
+
+    private static string BuildBreadcrumb(
+        string metric,
+        string direction,
+        int fromTick,
+        int toTick,
+        IReadOnlyList<EventSummary> nearbyEvents)
+    {
+        var verb = direction == "increased" ? "rose" : "dropped";
+        var eventSummary = nearbyEvents.FirstOrDefault();
+        if (eventSummary is null)
+        {
+            return $"{metric} {verb} between ticks {fromTick} and {toTick}.";
+        }
+
+        var timing = eventSummary.Tick <= toTick ? "after" : "near";
+        return $"{metric} {verb} {timing} {eventSummary.Type} at tick {eventSummary.Tick}.";
     }
 }
 
@@ -200,6 +222,8 @@ public sealed class MetricChangeSummary
     public string Direction { get; init; } = "";
 
     public string Unit { get; init; } = "";
+
+    public string Breadcrumb { get; init; } = "";
 
     public IReadOnlyList<EventSummary> NearbyEvents { get; init; } = [];
 }
