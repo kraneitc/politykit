@@ -367,13 +367,14 @@ Already built:
 - Event log output through CLI `events.jsonl` and API run event endpoints.
 - Formal scenario JSON schema.
 - Scenario authoring documentation for fields, validation rules, and supported shock types.
+- Summary output that links notable metric changes to nearby shocks and events.
+- Tests for summary interpretation.
 
 Remaining scope:
 
 - Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
 - More detailed trust and backlog behavior.
-- Summary output that links notable metric changes to nearby shocks and events.
-- Tests for schema validity, richer event fields, and interpretability summaries.
+- Tests for schema validity and richer event fields.
 
 Success criteria:
 

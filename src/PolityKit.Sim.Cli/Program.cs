@@ -155,33 +155,7 @@ internal static class Program
         WriteMetricsCsv(Path.Combine(outputDirectory, "metrics.csv"), result);
         WriteEventsJsonl(Path.Combine(outputDirectory, "events.jsonl"), result);
         WriteCitizensCsv(Path.Combine(outputDirectory, "citizens-final.csv"), result);
-        WriteJson(Path.Combine(outputDirectory, "summary.json"), CreateSummary(result));
-    }
-
-    private static object CreateSummary(SimulationRunResult result)
-    {
-        return new
-        {
-            result.ScenarioName,
-            result.Seed,
-            result.Ticks,
-            Models = result.ModelResults.Select(model => new
-            {
-                model.ModelName,
-                model.ModelVersion,
-                EventCount = model.Events.Count,
-                FinalMetrics = model.Metrics
-                    .GroupBy(metric => metric.Name)
-                    .Select(group => group.OrderByDescending(metric => metric.Tick).First())
-                    .OrderBy(metric => metric.Name)
-                    .Select(metric => new
-                    {
-                        metric.Name,
-                        metric.Tick,
-                        metric.Value
-                    })
-            })
-        };
+        WriteJson(Path.Combine(outputDirectory, "summary.json"), SimulationRunSummary.Create(result));
     }
 
     private static void WriteMetricsCsv(string path, SimulationRunResult result)
