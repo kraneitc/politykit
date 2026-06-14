@@ -3,10 +3,10 @@ using System.Text.Json;
 using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Core.Models;
 using PolityKit.Sim.Core.Scenarios;
-using PolityKit.Sim.Core.World;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
 using PolityKit.Sim.Models;
+using PolityKit.Sim.Scenarios;
 
 namespace PolityKit.Sim.Cli;
 
@@ -51,7 +51,7 @@ internal static class Program
             return 0;
         }
 
-        var scenario = LoadScenario(options.Scenario);
+        var scenario = new ScenarioResolver().Resolve(options.Scenario);
         if (options.Seed is not null)
         {
             scenario = scenario.WithSeed(options.Seed.Value);
@@ -114,28 +114,6 @@ internal static class Program
         }
 
         return selectedModels;
-    }
-
-    private static ScenarioDefinition LoadScenario(string? scenario)
-    {
-        if (string.IsNullOrWhiteSpace(scenario) || IsBuiltInVillageFoodCrisis(scenario))
-        {
-            return BuiltInScenarios.VillageFoodCrisis();
-        }
-
-        if (!File.Exists(scenario))
-        {
-            throw new FileNotFoundException($"Scenario file '{scenario}' was not found.");
-        }
-
-        var loadedScenario = JsonSerializer.Deserialize<ScenarioDefinition>(File.ReadAllText(scenario), JsonOptions);
-        return loadedScenario ?? throw new InvalidOperationException($"Scenario file '{scenario}' could not be read.");
-    }
-
-    private static bool IsBuiltInVillageFoodCrisis(string value)
-    {
-        return string.Equals(value, "village-food-crisis", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(value, "Village Food Crisis", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveOutputDirectory(string? outputDirectory, string scenarioName, int seed)
@@ -420,71 +398,5 @@ internal sealed class CliOptions
         return new KeyValuePair<string, double>(
             parts[0],
             double.Parse(parts[1], CultureInfo.InvariantCulture));
-    }
-}
-
-internal static class ScenarioExtensions
-{
-    public static ScenarioDefinition WithSeed(this ScenarioDefinition scenario, int seed)
-    {
-        return new ScenarioDefinition
-        {
-            Name = scenario.Name,
-            Seed = seed,
-            Ticks = scenario.Ticks,
-            InitialPopulation = scenario.InitialPopulation,
-            InitialResources = scenario.InitialResources,
-            Shocks = scenario.Shocks
-        };
-    }
-
-    public static ScenarioDefinition WithTicks(this ScenarioDefinition scenario, int ticks)
-    {
-        return new ScenarioDefinition
-        {
-            Name = scenario.Name,
-            Seed = scenario.Seed,
-            Ticks = ticks,
-            InitialPopulation = scenario.InitialPopulation,
-            InitialResources = scenario.InitialResources,
-            Shocks = scenario.Shocks
-        };
-    }
-}
-
-internal static class BuiltInScenarios
-{
-    public static ScenarioDefinition VillageFoodCrisis()
-    {
-        return new ScenarioDefinition
-        {
-            Name = "Village Food Crisis",
-            Seed = 12345,
-            Ticks = 120,
-            InitialPopulation = 500,
-            InitialResources = new ResourcePool
-            {
-                Food = 800,
-                Medicine = 120,
-                Housing = 450,
-                AdminCapacity = 80,
-                ProductionCapacity = 100
-            },
-            Shocks =
-            [
-                new ShockDefinition
-                {
-                    Tick = 20,
-                    Type = "CropFailure",
-                    Severity = 0.4
-                },
-                new ShockDefinition
-                {
-                    Tick = 45,
-                    Type = "AdministrativeOverload",
-                    Severity = 0.3
-                }
-            ]
-        };
     }
 }

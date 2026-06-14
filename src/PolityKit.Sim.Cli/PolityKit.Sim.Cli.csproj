@@ -12,6 +12,7 @@
     <ProjectReference Include="..\PolityKit.Sim.Engine\PolityKit.Sim.Engine.csproj" />
     <ProjectReference Include="..\PolityKit.Sim.Metrics\PolityKit.Sim.Metrics.csproj" />
     <ProjectReference Include="..\PolityKit.Sim.Models\PolityKit.Sim.Models.csproj" />
+    <ProjectReference Include="..\PolityKit.Sim.Scenarios\PolityKit.Sim.Scenarios.csproj" />
   </ItemGroup>
 
 </Project>
