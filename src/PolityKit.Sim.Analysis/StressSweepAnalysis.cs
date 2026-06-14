@@ -145,7 +145,8 @@ public sealed record StressSweepResult(
     int RunCount,
     IReadOnlyList<StressSweepRunResult> Runs,
     IReadOnlyList<SweepBestWorstReport> BestWorst,
-    IReadOnlyList<CollapseEvent> CollapseEvents);
+    IReadOnlyList<CollapseEvent> CollapseEvents,
+    SensitivityReport Sensitivity);
 
 public sealed record StressSweepRunResult(
     int RunIndex,

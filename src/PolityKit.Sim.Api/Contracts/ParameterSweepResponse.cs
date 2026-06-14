@@ -1,3 +1,5 @@
+using PolityKit.Sim.Analysis;
+
 namespace PolityKit.Sim.Api.Contracts;
 
 public sealed class ParameterSweepResponse
@@ -16,6 +18,8 @@ public sealed class ParameterSweepResponse
     public IReadOnlyList<ParameterSweepRunResponse> Runs { get; init; } = [];
 
     public IReadOnlyList<ParameterSweepBestWorstResponse> BestWorst { get; init; } = [];
+
+    public SensitivityReport Sensitivity { get; init; } = new([]);
 }
 
 public sealed class ParameterSweepRunResponse

@@ -76,7 +76,11 @@ public sealed class SimulationRunService(
                 StringComparer.OrdinalIgnoreCase),
             Runs = runs.Select(run => run.Response).ToArray(),
             BestWorst = RunMappers.ToBestWorstResponses(
-                SweepAnalysis.BuildBestWorst(runs.Select(run => run.Analysis).ToArray()))
+                SweepAnalysis.BuildBestWorst(runs.Select(run => run.Analysis).ToArray())),
+            Sensitivity = SensitivityAnalysis.BuildReport(
+                scenario.Name,
+                runs.Select(run => run.Analysis).ToArray(),
+                baseParameters)
         };
     }
 
@@ -164,7 +168,10 @@ public sealed class SimulationRunService(
                     run.Analysis.Parameters,
                     run.Analysis.FinalMetrics))
                 .ToArray())),
-            CollapseEvents = runs.SelectMany(run => run.Analysis.CollapseEvents).ToArray()
+            CollapseEvents = runs.SelectMany(run => run.Analysis.CollapseEvents).ToArray(),
+            Sensitivity = SensitivityAnalysis.BuildReport(
+                runs.Select(run => run.Analysis).ToArray(),
+                plan.BaseParameters)
         };
     }
 

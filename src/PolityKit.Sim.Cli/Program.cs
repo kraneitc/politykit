@@ -182,7 +182,8 @@ internal static class Program
             stressRuns.Count,
             stressRuns,
             bestWorst,
-            stressRuns.SelectMany(run => run.CollapseEvents).ToArray());
+            stressRuns.SelectMany(run => run.CollapseEvents).ToArray(),
+            SensitivityAnalysis.BuildReport(stressRuns, plan.BaseParameters));
 
         WriteStressMetricsCsv(Path.Combine(outputDirectory, "stress-metrics.csv"), stressRuns);
         WriteJson(Path.Combine(outputDirectory, "stress-summary.json"), stressResult);
@@ -269,7 +270,8 @@ internal static class Program
                 run.Parameters,
                 finalMetrics = run.FinalMetrics
             }),
-            bestWorst
+            bestWorst,
+            sensitivity = SensitivityAnalysis.BuildReport(scenario.Name, sweepRuns, options.Parameters)
         });
 
         Console.WriteLine($"Wrote sweep output to {outputDirectory}");

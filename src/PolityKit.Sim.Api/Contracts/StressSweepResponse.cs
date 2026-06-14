@@ -27,6 +27,8 @@ public sealed class StressSweepResponse
     public IReadOnlyList<ParameterSweepBestWorstResponse> BestWorst { get; init; } = [];
 
     public IReadOnlyList<CollapseEvent> CollapseEvents { get; init; } = [];
+
+    public SensitivityReport Sensitivity { get; init; } = new([]);
 }
 
 public sealed class StressSweepRunResponse

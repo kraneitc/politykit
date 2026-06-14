@@ -125,6 +125,11 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal(4, sweep.RunCount);
         Assert.Equal(4, sweep.Runs.Count);
         Assert.NotEmpty(sweep.BestWorst);
+        Assert.NotEmpty(sweep.Sensitivity.Metrics);
+        Assert.Contains(sweep.Sensitivity.Metrics, metric =>
+            metric.Model == "NeedBasedAllocation"
+            && metric.Metric == "Needs Met"
+            && metric.Parameters.Any(parameter => parameter.Parameter == "needPriorityWeight"));
         Assert.All(sweep.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);
@@ -189,6 +194,10 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation"], stress.Models);
         Assert.NotEmpty(stress.BestWorst);
         Assert.NotEmpty(stress.CollapseEvents);
+        Assert.NotEmpty(stress.Sensitivity.Metrics);
+        Assert.Contains(stress.Sensitivity.Metrics, metric =>
+            metric.ScenarioName == "Village Food Crisis"
+            && metric.Parameters.Any(parameter => parameter.Parameter == "needPriorityWeight"));
         Assert.All(stress.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);
