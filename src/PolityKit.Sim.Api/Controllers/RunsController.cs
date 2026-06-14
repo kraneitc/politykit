@@ -89,4 +89,14 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
             ? NotFound()
             : Ok(RunMappers.ToDashboardResponse(storedRun));
     }
+
+    [HttpGet("{id:guid}/compare/{comparisonId:guid}")]
+    public IActionResult CompareRuns(Guid id, Guid comparisonId)
+    {
+        var baseline = runStore.Get(id);
+        var comparison = runStore.Get(comparisonId);
+        return baseline is null || comparison is null
+            ? NotFound()
+            : Ok(RunMappers.ToComparisonResponse(baseline, comparison));
+    }
 }

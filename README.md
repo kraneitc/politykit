@@ -324,6 +324,12 @@ $rerun = Invoke-RestMethod `
   } | ConvertTo-Json -Depth 5)
 ```
 
+Compare two completed runs:
+
+```powershell
+Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/compare/$($rerun.id)"
+```
+
 List all persisted API runs:
 
 ```powershell
@@ -347,6 +353,7 @@ GET  /api/runs/{id}/metrics
 GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
 POST /api/runs/{id}/rerun
+GET  /api/runs/{id}/compare/{comparisonId}
 ```
 
 Example run request:

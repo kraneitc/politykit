@@ -318,6 +318,51 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.NotEmpty(model.FinalMetrics);
     }
 
+    [Fact]
+    public async Task CompareRunsReturnsSideBySideMetricDeltas()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var baseline = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 1.0
+            }
+        });
+        var comparison = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0
+            }
+        });
+
+        var response = await client.GetAsync($"/api/runs/{baseline.Id}/compare/{comparison.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var comparisonResponse = await response.Content.ReadFromJsonAsync<RunComparisonResponse>();
+        Assert.NotNull(comparisonResponse);
+        Assert.Equal(baseline.Id, comparisonResponse.Baseline.Id);
+        Assert.Equal(comparison.Id, comparisonResponse.Comparison.Id);
+        Assert.NotEmpty(comparisonResponse.MetricDeltas);
+        Assert.All(comparisonResponse.MetricDeltas, delta =>
+        {
+            Assert.Equal("NeedBasedAllocation", delta.Model);
+            Assert.NotNull(delta.BaselineValue);
+            Assert.NotNull(delta.ComparisonValue);
+            Assert.NotEqual("unavailable", delta.Direction);
+        });
+        Assert.Contains(comparisonResponse.MetricDeltas, delta => delta.Metric == "Needs Met");
+    }
+
     [Theory]
     [InlineData("/api/runs/{0}")]
     [InlineData("/api/runs/{0}/metrics")]
@@ -332,6 +377,20 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         var response = await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CompareRunsReturnsNotFoundWhenEitherRunIsMissing()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest());
+
+        var missingBaseline = await client.GetAsync($"/api/runs/{Guid.NewGuid()}/compare/{created.Id}");
+        var missingComparison = await client.GetAsync($"/api/runs/{created.Id}/compare/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, missingBaseline.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, missingComparison.StatusCode);
     }
 
     [Fact]
