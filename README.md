@@ -225,6 +225,32 @@ dotnet run --project src/PolityKit.Sim.Cli -- run \
   --out runs/corruption-need-weighted
 ```
 
+Run a local parameter sweep and write report files:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- sweep \
+  --scenario examples/village-food-crisis.json \
+  --models need-based-allocation \
+  --seed 12345 \
+  --ticks 60 \
+  --sweep needPriorityWeight=0.75,1.0,1.25 \
+  --sweep vulnerabilityPriorityWeight=0.25,0.5 \
+  --out runs/food-crisis-need-sweep
+```
+
+PowerShell version:
+
+```powershell
+dotnet run --project src/PolityKit.Sim.Cli -- sweep `
+  --scenario examples/village-food-crisis.json `
+  --models need-based-allocation `
+  --seed 12345 `
+  --ticks 60 `
+  --sweep needPriorityWeight=0.75,1.0,1.25 `
+  --sweep vulnerabilityPriorityWeight=0.25,0.5 `
+  --out runs/food-crisis-need-sweep
+```
+
 After a run, inspect:
 
 - `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
@@ -232,6 +258,12 @@ After a run, inspect:
 - `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
 - `citizens-final.csv` for final citizen state.
 - `config.json` for the scenario, seed, models, metrics, and parameters used.
+
+After a sweep, inspect:
+
+- `sweep-summary.json` for every parameter combination, final metrics, and best/worst runs by metric.
+- `sweep-metrics.csv` for a flat table of final metrics by sweep run.
+- `run-001/`, `run-002/`, and so on for full per-combination run bundles.
 
 ### Use the API
 
