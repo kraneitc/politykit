@@ -26,4 +26,23 @@ public sealed class ModelCatalogTests
         Assert.NotNull(model);
         Assert.Equal("NeedBasedAllocation", model.Name);
     }
+
+    [Fact]
+    public void FindByNameAcceptsCaseInsensitiveModelNames()
+    {
+        var catalog = new ModelCatalog();
+
+        var model = catalog.FindByName("marketbasedallocation");
+
+        Assert.NotNull(model);
+        Assert.Equal("MarketBasedAllocation", model.Name);
+    }
+
+    [Fact]
+    public void FindByNameRejectsBlankName()
+    {
+        var catalog = new ModelCatalog();
+
+        Assert.Throws<ArgumentException>(() => catalog.FindByName(""));
+    }
 }
