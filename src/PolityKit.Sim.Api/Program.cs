@@ -1,34 +1,46 @@
 
-namespace PolityKit.Sim.Api
+using PolityKit.Sim.Api.Services;
+using PolityKit.Sim.Engine;
+using PolityKit.Sim.Metrics;
+using PolityKit.Sim.Models;
+using PolityKit.Sim.Scenarios;
+
+namespace PolityKit.Sim.Api;
+
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        var builder = WebApplication.CreateBuilder(args);
+
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
+
+        builder.Services.AddControllers();
+        builder.Services.AddProblemDetails();
+        builder.Services.AddOpenApi();
+
+        builder.Services.AddSingleton<ISimulationEngine, SimulationEngine>();
+        builder.Services.AddSingleton<IModelCatalog>(_ => new ModelCatalog());
+        builder.Services.AddSingleton<IMetricCatalog>(_ => new MetricCatalog());
+        builder.Services.AddSingleton<IScenarioCatalog, BuiltInScenarioCatalog>();
+        builder.Services.AddSingleton<IScenarioValidator, ScenarioValidator>();
+        builder.Services.AddSingleton<IScenarioLoader, JsonScenarioLoader>();
+        builder.Services.AddSingleton<ScenarioResolver>();
+        builder.Services.AddSingleton<IRunStore, InMemoryRunStore>();
+        builder.Services.AddSingleton<SimulationRunService>();
+
+        var app = builder.Build();
+
+        if (app.Environment.IsDevelopment())
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-
-            builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-            builder.Services.AddOpenApi();
-
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.MapOpenApi();
-            }
-
-            app.UseHttpsRedirection();
-
-            app.UseAuthorization();
-
-
-            app.MapControllers();
-
-            app.Run();
+            app.MapOpenApi();
         }
+
+        app.UseHttpsRedirection();
+        app.UseAuthorization();
+        app.MapControllers();
+
+        app.Run();
     }
 }

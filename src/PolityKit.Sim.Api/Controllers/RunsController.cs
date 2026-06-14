@@ -1,0 +1,62 @@
+using Microsoft.AspNetCore.Mvc;
+using PolityKit.Sim.Api.Contracts;
+using PolityKit.Sim.Api.Services;
+
+namespace PolityKit.Sim.Api.Controllers;
+
+[ApiController]
+[Route("api/runs")]
+public sealed class RunsController(SimulationRunService simulationRunService, IRunStore runStore) : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetRuns()
+    {
+        return Ok(runStore.List().Select(RunMappers.ToSummaryResponse));
+    }
+
+    [HttpPost]
+    public IActionResult CreateRun([FromBody] CreateRunRequest request)
+    {
+        try
+        {
+            var storedRun = simulationRunService.CreateRun(request);
+            return CreatedAtAction(nameof(GetRun), new { id = storedRun.Id }, RunMappers.ToDetailResponse(storedRun));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Run request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
+    [HttpGet("{id:guid}")]
+    public IActionResult GetRun(Guid id)
+    {
+        var storedRun = runStore.Get(id);
+        return storedRun is null
+            ? NotFound()
+            : Ok(RunMappers.ToDetailResponse(storedRun));
+    }
+
+    [HttpGet("{id:guid}/metrics")]
+    public IActionResult GetRunMetrics(Guid id)
+    {
+        var storedRun = runStore.Get(id);
+        return storedRun is null
+            ? NotFound()
+            : Ok(RunMappers.ToMetrics(storedRun));
+    }
+
+    [HttpGet("{id:guid}/events")]
+    public IActionResult GetRunEvents(Guid id)
+    {
+        var storedRun = runStore.Get(id);
+        return storedRun is null
+            ? NotFound()
+            : Ok(RunMappers.ToEvents(storedRun));
+    }
+}
