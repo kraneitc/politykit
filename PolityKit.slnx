@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/PolityKit.Sim.Api.Tests/PolityKit.Sim.Api.Tests.csproj" />
+    <Project Path="tests/PolityKit.Sim.Tests/PolityKit.Sim.Tests.csproj" />
+  </Folder>
   <Project Path="src/PolityKit.Sim.Api/PolityKit.Sim.Api.csproj" Id="ce9fb27e-02ac-4f52-a10a-09a32f0b389c" />
   <Project Path="src/PolityKit.Sim.Cli/PolityKit.Sim.Cli.csproj" Id="25fa22ef-b197-441f-afa2-f011776a45f8" />
   <Project Path="src/PolityKit.Sim.Core/PolityKit.Sim.Core.csproj" Id="e2249e71-6bc0-4c19-a774-8f2f8dbf1a07" />
