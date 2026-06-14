@@ -149,6 +149,100 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task RerunCreatesNewRunWithSameSeedTicksAndModels()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0
+            }
+        });
+
+        var response = await client.PostAsJsonAsync($"/api/runs/{created.Id}/rerun", new RerunRequest());
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+
+        var rerun = await response.Content.ReadFromJsonAsync<RunDetailResponse>();
+        Assert.NotNull(rerun);
+        Assert.NotEqual(created.Id, rerun.Id);
+        Assert.Equal(created.ScenarioName, rerun.ScenarioName);
+        Assert.Equal(created.Seed, rerun.Seed);
+        Assert.Equal(created.Ticks, rerun.Ticks);
+
+        var model = Assert.Single(rerun.Models);
+        Assert.Equal("NeedBasedAllocation", model.ModelName);
+        Assert.Equal(
+            created.Models.Single().FinalMetrics.Select(metric => (metric.Name, metric.Value)).ToArray(),
+            model.FinalMetrics.Select(metric => (metric.Name, metric.Value)).ToArray());
+    }
+
+    [Fact]
+    public async Task RerunAppliesOverridesButKeepsOriginalSeed()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 1.0
+            }
+        });
+
+        var response = await client.PostAsJsonAsync($"/api/runs/{created.Id}/rerun", new RerunRequest
+        {
+            Ticks = 3,
+            Models = ["market-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["wealthPriorityWeight"] = 1.5
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var rerun = await response.Content.ReadFromJsonAsync<RunDetailResponse>();
+        Assert.NotNull(rerun);
+        Assert.Equal(333, rerun.Seed);
+        Assert.Equal(3, rerun.Ticks);
+
+        var model = Assert.Single(rerun.Models);
+        Assert.Equal("MarketBasedAllocation", model.ModelName);
+        Assert.All(model.FinalMetrics, metric => Assert.Equal(2, metric.Tick));
+    }
+
+    [Fact]
+    public async Task RerunWithUnknownModelReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest());
+
+        var response = await client.PostAsJsonAsync($"/api/runs/{created.Id}/rerun", new RerunRequest
+        {
+            Models = ["unknown-model"]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Run request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Unknown model 'unknown-model'.", problem.Detail);
+    }
+
+    [Fact]
     public async Task GetRunMetricsReturnsMetricsForCreatedRun()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -236,6 +330,17 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         var route = string.Format(routeTemplate, Guid.NewGuid());
 
         var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RerunReturnsNotFoundForMissingRun()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync($"/api/runs/{Guid.NewGuid()}/rerun", new RerunRequest());
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

@@ -300,6 +300,30 @@ Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/events"
 Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/dashboard"
 ```
 
+Rerun a completed run with the same scenario and seed:
+
+```powershell
+$rerun = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/$($run.id)/rerun" `
+  -ContentType "application/json" `
+  -Body (@{} | ConvertTo-Json)
+```
+
+Rerun with changed model parameters while keeping the original seed:
+
+```powershell
+$rerun = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/$($run.id)/rerun" `
+  -ContentType "application/json" `
+  -Body (@{
+    parameters = @{
+      needPriorityWeight = 1.25
+    }
+  } | ConvertTo-Json -Depth 5)
+```
+
 List all persisted API runs:
 
 ```powershell
@@ -322,6 +346,7 @@ GET  /api/runs/{id}
 GET  /api/runs/{id}/metrics
 GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
+POST /api/runs/{id}/rerun
 ```
 
 Example run request:

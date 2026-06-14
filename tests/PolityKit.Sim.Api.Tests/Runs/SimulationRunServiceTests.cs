@@ -60,6 +60,89 @@ public sealed class SimulationRunServiceTests
     }
 
     [Fact]
+    public void RerunUsesStoredScenarioSeedTicksModelsAndParameters()
+    {
+        var engine = new RecordingSimulationEngine();
+        var store = new InMemoryRunStore();
+        var service = CreateService(engine, store);
+        var original = service.CreateRun(new CreateRunRequest
+        {
+            Scenario = "service-scenario",
+            Seed = 777,
+            Ticks = 6,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0
+            }
+        });
+
+        var rerun = service.Rerun(original.Id, null);
+
+        Assert.NotNull(rerun);
+        Assert.NotEqual(original.Id, rerun.Id);
+        Assert.Same(rerun, store.Get(rerun.Id));
+        Assert.Equal(2, engine.Requests.Count);
+
+        var request = engine.Requests[1];
+        Assert.Equal("Service Scenario", request.Scenario.Name);
+        Assert.Equal(777, request.Seed);
+        Assert.Equal(777, request.Scenario.Seed);
+        Assert.Equal(6, request.Scenario.Ticks);
+        Assert.Equal(["NeedBasedAllocation"], request.Models.Select(model => model.Name).ToArray());
+        Assert.Equal(2.0, request.Parameters["needPriorityWeight"]);
+    }
+
+    [Fact]
+    public void RerunAllowsTickModelAndParameterOverridesWithoutChangingSeed()
+    {
+        var engine = new RecordingSimulationEngine();
+        var service = CreateService(engine, new InMemoryRunStore());
+        var original = service.CreateRun(new CreateRunRequest
+        {
+            Scenario = "service-scenario",
+            Seed = 777,
+            Ticks = 6,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0,
+                ["vulnerabilityPriorityWeight"] = 0.25
+            }
+        });
+
+        service.Rerun(original.Id, new RerunRequest
+        {
+            Ticks = 4,
+            Models = ["market-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 3.0,
+                ["wealthPriorityWeight"] = 1.5
+            }
+        });
+
+        var request = engine.Requests[1];
+        Assert.Equal(777, request.Seed);
+        Assert.Equal(777, request.Scenario.Seed);
+        Assert.Equal(4, request.Scenario.Ticks);
+        Assert.Equal(["MarketBasedAllocation"], request.Models.Select(model => model.Name).ToArray());
+        Assert.Equal(3.0, request.Parameters["needPriorityWeight"]);
+        Assert.Equal(0.25, request.Parameters["vulnerabilityPriorityWeight"]);
+        Assert.Equal(1.5, request.Parameters["wealthPriorityWeight"]);
+    }
+
+    [Fact]
+    public void RerunReturnsNullForMissingRun()
+    {
+        var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
+
+        var rerun = service.Rerun(Guid.NewGuid(), null);
+
+        Assert.Null(rerun);
+    }
+
+    [Fact]
     public void CreateRunRejectsUnknownModel()
     {
         var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
@@ -111,11 +194,16 @@ public sealed class SimulationRunServiceTests
 
     private sealed class RecordingSimulationEngine : ISimulationEngine
     {
+        private readonly List<SimulationRunRequest> _requests = [];
+
+        public IReadOnlyList<SimulationRunRequest> Requests => _requests;
+
         public SimulationRunRequest? LastRequest { get; private set; }
 
         public SimulationRunResult Run(SimulationRunRequest request)
         {
             LastRequest = request;
+            _requests.Add(request);
 
             return new SimulationRunResult
             {

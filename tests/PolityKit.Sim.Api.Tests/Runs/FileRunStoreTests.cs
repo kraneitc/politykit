@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using PolityKit.Sim.Api.Services;
 using PolityKit.Sim.Api.Services.Models;
+using PolityKit.Sim.Core.Simulation;
 using PolityKit.Sim.Engine;
 
 namespace PolityKit.Sim.Api.Tests.Runs;
@@ -17,6 +18,17 @@ public sealed class FileRunStoreTests : IDisposable
         {
             Id = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
             CreatedAt = DateTimeOffset.Parse("2026-06-14T03:00:00Z"),
+            Configuration = new RunConfiguration
+            {
+                ScenarioName = "Persistent Scenario",
+                Seed = 123,
+                Ticks = 5,
+                ModelNames = ["NeedBasedAllocation"],
+                Parameters =
+                {
+                    ["needPriorityWeight"] = 2.0
+                }
+            },
             Result = new SimulationRunResult
             {
                 ScenarioName = "Persistent Scenario",
@@ -35,6 +47,9 @@ public sealed class FileRunStoreTests : IDisposable
         Assert.Equal("Persistent Scenario", restored.Result.ScenarioName);
         Assert.Equal(123, restored.Result.Seed);
         Assert.Equal(5, restored.Result.Ticks);
+        Assert.Equal("Persistent Scenario", restored.Configuration.ScenarioName);
+        Assert.Equal(["NeedBasedAllocation"], restored.Configuration.ModelNames);
+        Assert.Equal(2.0, restored.Configuration.Parameters["needPriorityWeight"]);
     }
 
     [Fact]

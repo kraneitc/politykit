@@ -33,6 +33,27 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
         }
     }
 
+    [HttpPost("{id:guid}/rerun")]
+    public IActionResult Rerun(Guid id, [FromBody] RerunRequest? request)
+    {
+        try
+        {
+            var storedRun = simulationRunService.Rerun(id, request);
+            return storedRun is null
+                ? NotFound()
+                : CreatedAtAction(nameof(GetRun), new { id = storedRun.Id }, RunMappers.ToDetailResponse(storedRun));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Run request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
     [HttpGet("{id:guid}")]
     public IActionResult GetRun(Guid id)
     {
