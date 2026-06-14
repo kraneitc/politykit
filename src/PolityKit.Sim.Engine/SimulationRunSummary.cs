@@ -166,7 +166,11 @@ public sealed class SimulationRunSummary
         IReadOnlyList<EventSummary> nearbyEvents)
     {
         var verb = direction == "increased" ? "rose" : "dropped";
-        var eventSummary = nearbyEvents.FirstOrDefault();
+        var eventSummary = nearbyEvents
+            .OrderBy(EventBreadcrumbPriority)
+            .ThenBy(simEvent => Math.Abs(simEvent.Tick - toTick))
+            .ThenBy(simEvent => simEvent.Tick)
+            .FirstOrDefault();
         if (eventSummary is null)
         {
             return $"{metric} {verb} between ticks {fromTick} and {toTick}.";
@@ -174,6 +178,16 @@ public sealed class SimulationRunSummary
 
         var timing = eventSummary.Tick <= toTick ? "after" : "near";
         return $"{metric} {verb} {timing} {eventSummary.Type} at tick {eventSummary.Tick}.";
+    }
+
+    private static int EventBreadcrumbPriority(EventSummary simEvent)
+    {
+        return simEvent.Type switch
+        {
+            "CropFailure" or "MedicineShortage" or "HousingLoss" or "AdministrativeOverload" or "AdminLoss" or "CorruptionSpike" => 0,
+            "AdministrativeBacklog" or "UnmetNeeds" => 1,
+            _ => 2
+        };
     }
 }
 

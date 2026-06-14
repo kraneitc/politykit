@@ -372,6 +372,7 @@ Already built:
 - Richer event log context for shocks, allocations, administrative pressure, trust shifts, and severe failures.
 - Tests for richer event fields.
 - Tests for schema validity, example scenario compatibility, summary generation, and event-link breadcrumbs.
+- Golden interpreted run bundle under `examples/golden-interpreted-run`.
 
 Remaining scope:
 

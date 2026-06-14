@@ -2,6 +2,8 @@
 
 This folder contains starter scenario JSON files for local simulation runs.
 
+It also contains [golden-interpreted-run](golden-interpreted-run), a compact checked-in run bundle that demonstrates readable interpreted output.
+
 Each file follows the current `ScenarioDefinition` shape:
 
 - `name`: scenario display name.
@@ -19,6 +21,8 @@ Known shock types currently handled by the engine include:
 - `AdministrativeOverload`
 - `AdminLoss`
 - `CorruptionSpike`
+
+The golden bundle was generated from `interpretability-demo.json` and is useful when changing summary or event-log behavior.
 
 Example future CLI usage:
 

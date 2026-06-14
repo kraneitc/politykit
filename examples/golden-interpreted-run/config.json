@@ -1,0 +1,45 @@
+{
+  "scenario": {
+    "Name": "Interpretability Demo",
+    "Seed": 4242,
+    "Ticks": 12,
+    "InitialPopulation": 12,
+    "InitialResources": {
+      "Food": 18,
+      "Medicine": 6,
+      "Housing": 10,
+      "AdminCapacity": 2,
+      "ProductionCapacity": 20
+    },
+    "Shocks": [
+      {
+        "Tick": 3,
+        "Type": "AdministrativeOverload",
+        "Severity": 0.6,
+        "Parameters": {}
+      },
+      {
+        "Tick": 6,
+        "Type": "CorruptionSpike",
+        "Severity": 0.25,
+        "Parameters": {}
+      }
+    ]
+  },
+  "Seed": 4242,
+  "Ticks": 12,
+  "models": [
+    {
+      "Name": "NeedBasedAllocation",
+      "Version": "0.1.0"
+    }
+  ],
+  "metrics": [
+    "Needs Met",
+    "Inequality",
+    "Trust",
+    "Severe Failures",
+    "Administrative Load"
+  ],
+  "parameters": {}
+}

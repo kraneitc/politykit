@@ -1,0 +1,13 @@
+model,citizenId,foodNeed,healthNeed,housingNeed,wealth,socialPower,trustInSystem,vulnerability
+NeedBasedAllocation,4823cbc6-aca3-407a-a630-986f6358fe1f,0,0,0,98,40,70,56
+NeedBasedAllocation,5e49c941-6338-45bf-8d9e-a222f4b1cd39,0,0,0,50,25,77,39
+NeedBasedAllocation,e7564d5e-0582-47f8-b470-fe2eb69cfafa,1,0,0,3,50,67,45
+NeedBasedAllocation,4ff6e2e8-d089-44c9-a414-c9f799261423,0,1,0,44,90,35,6
+NeedBasedAllocation,e7fb865a-6d8f-4217-8194-e68a6e2dcafd,1,1,0,82,10,46,85
+NeedBasedAllocation,c56e51c2-b1cd-433c-ad78-d930692ec1bf,0,2,0,79,57,35,24
+NeedBasedAllocation,01b51158-d3ac-432a-ae74-40a5ff0cda66,1,0,0,46,55,70,56
+NeedBasedAllocation,887b31be-2e36-41cf-a7ae-20d526217b0d,0,0,0,52,69,68,28
+NeedBasedAllocation,99ef7eeb-e3a0-4e44-b303-1c4c25ef5bce,0,0,0,49,57,65,34
+NeedBasedAllocation,e65757d6-c394-4fad-a23b-3b85d5123f39,2,0,0,15,46,54,65
+NeedBasedAllocation,f6845170-75a9-452f-80bc-9920c063d75b,0,2,0,93,76,41,40
+NeedBasedAllocation,193f794a-8a94-4b06-8662-0aa4ca729e6f,0,1,0,35,14,53,35

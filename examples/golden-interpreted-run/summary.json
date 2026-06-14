@@ -1,0 +1,114 @@
+{
+  "ScenarioName": "Interpretability Demo",
+  "Seed": 4242,
+  "Ticks": 12,
+  "Models": [
+    {
+      "ModelName": "NeedBasedAllocation",
+      "ModelVersion": "0.1.0",
+      "EventCount": 57,
+      "EventCountsByType": {
+        "AdministrativeOverload": 1,
+        "CorruptionSpike": 1,
+        "NeedAssessment": 12,
+        "ResourceAllocated": 31,
+        "UnmetNeeds": 12
+      },
+      "FinalMetrics": [
+        {
+          "Name": "Administrative Load",
+          "Tick": 11,
+          "Value": 0,
+          "Unit": ""
+        },
+        {
+          "Name": "Inequality",
+          "Tick": 11,
+          "Value": 0.29282765737874095,
+          "Unit": ""
+        },
+        {
+          "Name": "Needs Met",
+          "Tick": 11,
+          "Value": 0.3333333333333333,
+          "Unit": ""
+        },
+        {
+          "Name": "Severe Failures",
+          "Tick": 11,
+          "Value": 3,
+          "Unit": ""
+        },
+        {
+          "Name": "Trust",
+          "Tick": 11,
+          "Value": 44.875,
+          "Unit": ""
+        }
+      ],
+      "NotableMetricChanges": [
+        {
+          "Metric": "Trust",
+          "FromTick": 2,
+          "ToTick": 7,
+          "PreviousValue": 64.875,
+          "Value": 48.20833333333333,
+          "Change": -16.66666666666667,
+          "AbsoluteChange": 16.66666666666667,
+          "Direction": "decreased",
+          "Unit": "",
+          "Breadcrumb": "Trust dropped after CorruptionSpike at tick 6.",
+          "NearbyEvents": [
+            {
+              "Tick": 7,
+              "Type": "NeedAssessment",
+              "Description": "Assessed citizen need and vulnerability before allocation.",
+              "Data": {
+                "actionType": "NeedAssessment",
+                "administrativeCost": 1,
+                "administrativeLoadBefore": 0,
+                "administrativeLoadAfter": 1,
+                "administrativeLoadDelta": 1
+              }
+            },
+            {
+              "Tick": 7,
+              "Type": "UnmetNeeds",
+              "Description": "Unmet need total was 12; institutional trust fell by 1.",
+              "Data": {
+                "unmetNeed": 12,
+                "affectedCitizenCount": 8,
+                "populationCount": 12,
+                "averageUnmetNeed": 1,
+                "foodNeed": 5,
+                "healthNeed": 7,
+                "housingNeed": 0,
+                "trustPenalty": 1,
+                "institutionalTrustBefore": 38,
+                "institutionalTrustAfter": 37,
+                "institutionalTrustDelta": -1,
+                "citizenTrustDelta": -1
+              }
+            },
+            {
+              "Tick": 6,
+              "Type": "CorruptionSpike",
+              "Description": "Applied shock \u0027CorruptionSpike\u0027 with severity 0.25.",
+              "Data": {
+                "shockType": "CorruptionSpike",
+                "severity": 0.25,
+                "requestedSeverity": 0.25,
+                "corruptionBefore": 0,
+                "institutionalTrustBefore": 64,
+                "corruptionAfter": 0.25,
+                "corruptionDelta": 0.25,
+                "institutionalTrustAfter": 39,
+                "institutionalTrustDelta": -25
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

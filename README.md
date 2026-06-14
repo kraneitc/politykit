@@ -27,6 +27,7 @@ PolityKit includes:
   - `Administrative Load`
 - Built-in and JSON-loaded scenarios, including the built-in `Village Food Crisis`.
 - Example scenario files under `examples/`.
+- A golden interpreted run bundle under `examples/golden-interpreted-run`.
 - A CLI runner that writes run bundles to disk.
 - An ASP.NET Core API for listing models, metrics, scenarios, and creating/querying simulation runs.
 - Automated unit and integration tests for the simulation libraries and API.
@@ -52,7 +53,9 @@ PolityKit/
   examples/
     README.md
     corruption-stress.json
+    golden-interpreted-run/
     housing-displacement.json
+    interpretability-demo.json
     medicine-shortage.json
     village-food-crisis.json
   src/
@@ -344,9 +347,11 @@ Example JSON scenarios live in `examples/`:
 - `village-food-crisis.json`
 - `medicine-shortage.json`
 - `housing-displacement.json`
+- `interpretability-demo.json`
 - `corruption-stress.json`
 
 The scenario guide lives at `docs/scenarios.md`, and the formal schema lives at `docs/scenario.schema.json`.
+The golden interpreted run bundle lives at `examples/golden-interpreted-run`.
 
 Each scenario includes:
 

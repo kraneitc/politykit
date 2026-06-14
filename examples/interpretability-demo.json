@@ -1,0 +1,25 @@
+{
+  "name": "Interpretability Demo",
+  "seed": 4242,
+  "ticks": 12,
+  "initialPopulation": 12,
+  "initialResources": {
+    "food": 18,
+    "medicine": 6,
+    "housing": 10,
+    "adminCapacity": 2,
+    "productionCapacity": 20
+  },
+  "shocks": [
+    {
+      "tick": 3,
+      "type": "AdministrativeOverload",
+      "severity": 0.6
+    },
+    {
+      "tick": 6,
+      "type": "CorruptionSpike",
+      "severity": 0.25
+    }
+  ]
+}
