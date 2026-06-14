@@ -1,5 +1,6 @@
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services;
+using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Core.Scenarios;
 using PolityKit.Sim.Core.World;
 using PolityKit.Sim.Engine;
@@ -171,6 +172,12 @@ public sealed class SimulationRunServiceTests
         Assert.Equal(6, response.Ticks);
         Assert.Equal(4, response.RunCount);
         Assert.Equal(4, response.Runs.Count);
+        Assert.NotEmpty(response.BestWorst);
+        Assert.All(response.BestWorst, report =>
+        {
+            Assert.InRange(report.Best.RunIndex, 1, 4);
+            Assert.InRange(report.Worst.RunIndex, 1, 4);
+        });
         Assert.Equal(4, store.List().Count);
         Assert.Equal(4, engine.Requests.Count);
         Assert.All(response.Runs, run =>
@@ -290,7 +297,17 @@ public sealed class SimulationRunServiceTests
                 ModelResults = request.Models.Select(model => new ModelRunResult
                 {
                     ModelName = model.Name,
-                    ModelVersion = model.Version
+                    ModelVersion = model.Version,
+                    Metrics =
+                    [
+                        new MetricResult
+                        {
+                            Name = "Needs Met",
+                            Tick = Math.Max(0, request.Scenario.Ticks - 1),
+                            Value = request.Parameters.GetValueOrDefault("needPriorityWeight", 1),
+                            Unit = "ratio"
+                        }
+                    ]
                 }).ToArray()
             };
         }

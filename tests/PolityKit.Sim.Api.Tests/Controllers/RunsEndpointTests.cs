@@ -124,6 +124,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal(4, sweep.Ticks);
         Assert.Equal(4, sweep.RunCount);
         Assert.Equal(4, sweep.Runs.Count);
+        Assert.NotEmpty(sweep.BestWorst);
         Assert.All(sweep.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);

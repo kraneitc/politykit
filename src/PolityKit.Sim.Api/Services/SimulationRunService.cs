@@ -1,3 +1,4 @@
+using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services.Models;
 using PolityKit.Sim.Core.Models;
@@ -16,8 +17,6 @@ public sealed class SimulationRunService(
     ScenarioResolver scenarioResolver,
     IRunStore runStore)
 {
-    private const int MaxSweepRuns = 256;
-
     public StoredRun CreateRun(CreateRunRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -40,20 +39,25 @@ public sealed class SimulationRunService(
         var ticks = request.Ticks ?? scenario.Ticks;
         var models = SelectModels(request.Models);
         var baseParameters = request.Parameters ?? new Dictionary<string, double>();
-        var sweep = NormalizeSweep(request.Sweep);
-        var combinations = BuildParameterCombinations(baseParameters, sweep);
+        var sweep = SweepAnalysis.NormalizeSweep(request.Sweep);
+        var combinations = SweepAnalysis.BuildParameterCombinations(baseParameters, sweep);
 
         var runs = combinations
-            .Select(parameters => new
+            .Select((parameters, index) =>
             {
-                Parameters = parameters,
-                StoredRun = RunAndStore(scenario.Name, seed, ticks, models, parameters)
-            })
-            .Select(item => new ParameterSweepRunResponse
-            {
-                Run = RunMappers.ToSummaryResponse(item.StoredRun),
-                Parameters = item.Parameters,
-                FinalMetrics = RunMappers.ToFinalMetrics(item.StoredRun)
+                var storedRun = RunAndStore(scenario.Name, seed, ticks, models, parameters);
+                var finalMetrics = SweepAnalysis.SelectFinalMetrics(storedRun.Result);
+
+                return new
+                {
+                    Analysis = new SweepRunReport(index + 1, null, parameters, finalMetrics),
+                    Response = new ParameterSweepRunResponse
+                    {
+                        Run = RunMappers.ToSummaryResponse(storedRun),
+                        Parameters = parameters,
+                        FinalMetrics = RunMappers.ToMetricResponses(finalMetrics)
+                    }
+                };
             })
             .ToArray();
 
@@ -67,7 +71,9 @@ public sealed class SimulationRunService(
                 item => item.Key,
                 item => (IReadOnlyList<double>)item.Value.ToArray(),
                 StringComparer.OrdinalIgnoreCase),
-            Runs = runs
+            Runs = runs.Select(run => run.Response).ToArray(),
+            BestWorst = RunMappers.ToBestWorstResponses(
+                SweepAnalysis.BuildBestWorst(runs.Select(run => run.Analysis).ToArray()))
         };
     }
 
@@ -144,65 +150,6 @@ public sealed class SimulationRunService(
             .Select(modelName => modelCatalog.FindByName(modelName)
                 ?? throw new InvalidOperationException($"Unknown model '{modelName}'."))
             .ToArray();
-    }
-
-    private static IReadOnlyDictionary<string, IReadOnlyList<double>> NormalizeSweep(
-        IReadOnlyDictionary<string, IReadOnlyList<double>>? sweep)
-    {
-        if (sweep is null || sweep.Count == 0)
-        {
-            throw new InvalidOperationException("At least one sweep parameter is required.");
-        }
-
-        var normalized = new Dictionary<string, IReadOnlyList<double>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (name, values) in sweep.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new InvalidOperationException("Sweep parameter names cannot be blank.");
-            }
-
-            if (values.Count == 0)
-            {
-                throw new InvalidOperationException($"Sweep parameter '{name}' must include at least one value.");
-            }
-
-            normalized[name] = values.ToArray();
-        }
-
-        var runCount = normalized.Values.Aggregate(1, (count, values) => count * values.Count);
-        if (runCount > MaxSweepRuns)
-        {
-            throw new InvalidOperationException($"Sweep would create {runCount} runs; the maximum is {MaxSweepRuns}.");
-        }
-
-        return normalized;
-    }
-
-    private static IReadOnlyList<IReadOnlyDictionary<string, double>> BuildParameterCombinations(
-        IReadOnlyDictionary<string, double> baseParameters,
-        IReadOnlyDictionary<string, IReadOnlyList<double>> sweep)
-    {
-        var combinations = new List<Dictionary<string, double>>
-        {
-            new(baseParameters, StringComparer.OrdinalIgnoreCase)
-        };
-
-        foreach (var (name, values) in sweep)
-        {
-            combinations = combinations
-                .SelectMany(existing => values.Select(value =>
-                {
-                    var next = new Dictionary<string, double>(existing, StringComparer.OrdinalIgnoreCase)
-                    {
-                        [name] = value
-                    };
-                    return next;
-                }))
-                .ToList();
-        }
-
-        return combinations;
     }
 
     private static RunConfiguration GetConfiguration(StoredRun run)

@@ -1,6 +1,6 @@
+using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services.Models;
-using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Engine;
 
 namespace PolityKit.Sim.Api.Services;
@@ -34,19 +34,9 @@ public static class RunMappers
                 ModelName = model.ModelName,
                 ModelVersion = model.ModelVersion,
                 EventCount = model.Events.Count,
-                FinalMetrics = model.Metrics
-                    .GroupBy(metric => metric.Name)
-                    .Select(group => group.OrderByDescending(metric => metric.Tick).First())
-                    .OrderBy(metric => metric.Name)
-                    .Select(metric => new MetricResponse
-                    {
-                        Model = model.ModelName,
-                        Tick = metric.Tick,
-                        Name = metric.Name,
-                        Value = metric.Value,
-                        Unit = metric.Unit
-                    })
-                    .ToArray()
+                FinalMetrics = ToMetricResponses(SweepAnalysis.SelectFinalMetrics(run.Result)
+                    .Where(metric => metric.Model == model.ModelName)
+                    .ToArray())
             }).ToArray()
         };
     }
@@ -105,19 +95,36 @@ public static class RunMappers
 
     public static IReadOnlyList<MetricResponse> ToFinalMetrics(StoredRun run)
     {
-        return run.Result.ModelResults
-            .SelectMany(model => model.Metrics
-                .GroupBy(metric => metric.Name)
-                .Select(group => group.OrderByDescending(metric => metric.Tick).First())
-                .OrderBy(metric => metric.Name)
-                .Select(metric => new MetricResponse
-                {
-                    Model = model.ModelName,
-                    Tick = metric.Tick,
-                    Name = metric.Name,
-                    Value = metric.Value,
-                    Unit = metric.Unit
-                }))
+        return ToMetricResponses(SweepAnalysis.SelectFinalMetrics(run.Result));
+    }
+
+    public static IReadOnlyList<MetricResponse> ToMetricResponses(IReadOnlyList<SweepMetricReport> metrics)
+    {
+        return metrics
+            .Select(metric => new MetricResponse
+            {
+                Model = metric.Model,
+                Tick = metric.Tick,
+                Name = metric.Name,
+                Value = metric.Value,
+                Unit = metric.Unit
+            })
+            .ToArray();
+    }
+
+    public static IReadOnlyList<ParameterSweepBestWorstResponse> ToBestWorstResponses(
+        IReadOnlyList<SweepBestWorstReport> reports)
+    {
+        return reports
+            .Select(report => new ParameterSweepBestWorstResponse
+            {
+                Model = report.Model,
+                Metric = report.Metric,
+                Unit = report.Unit,
+                BestDirection = report.BestDirection,
+                Best = ToMetricRunResponse(report.Best),
+                Worst = ToMetricRunResponse(report.Worst)
+            })
             .ToArray();
     }
 
@@ -137,8 +144,8 @@ public static class RunMappers
 
     private static MetricComparisonResponse ToMetricComparison(
         MetricKey key,
-        MetricResult? baselineMetric,
-        MetricResult? comparisonMetric)
+        SweepMetricReport? baselineMetric,
+        SweepMetricReport? comparisonMetric)
     {
         double? change = baselineMetric is null || comparisonMetric is null
             ? null
@@ -162,17 +169,26 @@ public static class RunMappers
         };
     }
 
-    private static IReadOnlyDictionary<MetricKey, MetricResult> SelectFinalMetrics(StoredRun run)
+    private static IReadOnlyDictionary<MetricKey, SweepMetricReport> SelectFinalMetrics(StoredRun run)
     {
-        return run.Result.ModelResults
-            .SelectMany(model => model.Metrics
-                .GroupBy(metric => metric.Name)
-                .Select(group => new
-                {
-                    Key = new MetricKey(model.ModelName, group.Key),
-                    Metric = group.OrderByDescending(metric => metric.Tick).First()
-                }))
+        return SweepAnalysis.SelectFinalMetrics(run.Result)
+            .Select(metric => new
+            {
+                Key = new MetricKey(metric.Model, metric.Name),
+                Metric = metric
+            })
             .ToDictionary(item => item.Key, item => item.Metric);
+    }
+
+    private static ParameterSweepMetricRunResponse ToMetricRunResponse(SweepMetricRunReport report)
+    {
+        return new ParameterSweepMetricRunResponse
+        {
+            RunIndex = report.RunIndex,
+            Directory = report.Directory,
+            Value = report.Value,
+            Parameters = report.Parameters
+        };
     }
 
     private static string Direction(double? change)

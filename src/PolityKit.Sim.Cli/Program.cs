@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Core.Models;
 using PolityKit.Sim.Core.Scenarios;
@@ -101,11 +102,6 @@ internal static class Program
             return 0;
         }
 
-        if (options.Sweeps.Count == 0)
-        {
-            throw new InvalidOperationException("At least one --sweep parameter is required.");
-        }
-
         var scenario = new ScenarioResolver().Resolve(options.Scenario);
         if (options.Seed is not null)
         {
@@ -120,7 +116,8 @@ internal static class Program
         var modelCatalog = new ModelCatalog();
         var models = SelectModels(modelCatalog, options.Models);
         var metrics = DefaultMetricSet.Create();
-        var combinations = BuildParameterCombinations(options.Parameters, options.Sweeps);
+        var sweep = SweepAnalysis.NormalizeSweep(options.Sweeps);
+        var combinations = SweepAnalysis.BuildParameterCombinations(options.Parameters, sweep);
         var outputDirectory = ResolveSweepOutputDirectory(options.OutputDirectory, scenario.Name, scenario.Seed);
         var sweepRuns = new List<SweepRunReport>();
 
@@ -144,10 +141,10 @@ internal static class Program
                 index + 1,
                 runDirectoryName,
                 parameters,
-                SelectFinalMetrics(result)));
+                SweepAnalysis.SelectFinalMetrics(result)));
         }
 
-        var bestWorst = BuildBestWorst(sweepRuns);
+        var bestWorst = SweepAnalysis.BuildBestWorst(sweepRuns);
         WriteSweepMetricsCsv(Path.Combine(outputDirectory, "sweep-metrics.csv"), sweepRuns);
         WriteJson(Path.Combine(outputDirectory, "sweep-summary.json"), new
         {
@@ -160,7 +157,7 @@ internal static class Program
                 model.Version
             }),
             baseParameters = options.Parameters,
-            sweep = options.Sweeps,
+            sweep,
             runCount = sweepRuns.Count,
             runs = sweepRuns.Select(run => new
             {
@@ -298,7 +295,7 @@ internal static class Program
             {
                 writer.WriteLine(string.Join(',',
                     run.RunIndex.ToString(CultureInfo.InvariantCulture),
-                    Csv(run.Directory),
+                    Csv(run.Directory ?? ""),
                     Csv(parameters),
                     Csv(metric.Model),
                     Csv(metric.Name),
@@ -354,102 +351,6 @@ internal static class Program
     private static void WriteJson(string path, object value)
     {
         File.WriteAllText(path, JsonSerializer.Serialize(value, JsonOptions));
-    }
-
-    private static IReadOnlyList<Dictionary<string, double>> BuildParameterCombinations(
-        IReadOnlyDictionary<string, double> baseParameters,
-        IReadOnlyDictionary<string, IReadOnlyList<double>> sweeps)
-    {
-        var combinations = new List<Dictionary<string, double>>
-        {
-            new(baseParameters, StringComparer.OrdinalIgnoreCase)
-        };
-
-        foreach (var (name, values) in sweeps.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
-        {
-            combinations = combinations
-                .SelectMany(existing => values.Select(value =>
-                {
-                    var next = new Dictionary<string, double>(existing, StringComparer.OrdinalIgnoreCase)
-                    {
-                        [name] = value
-                    };
-                    return next;
-                }))
-                .ToList();
-        }
-
-        if (combinations.Count > 256)
-        {
-            throw new InvalidOperationException($"Sweep would create {combinations.Count} runs; the maximum is 256.");
-        }
-
-        return combinations;
-    }
-
-    private static IReadOnlyList<SweepMetricReport> SelectFinalMetrics(SimulationRunResult result)
-    {
-        return result.ModelResults
-            .SelectMany(model => model.Metrics
-                .GroupBy(metric => metric.Name)
-                .Select(group => group.OrderByDescending(metric => metric.Tick).First())
-                .OrderBy(metric => metric.Name)
-                .Select(metric => new SweepMetricReport(
-                    model.ModelName,
-                    metric.Name,
-                    metric.Value,
-                    metric.Unit)))
-            .ToArray();
-    }
-
-    private static IReadOnlyList<SweepBestWorstReport> BuildBestWorst(IReadOnlyList<SweepRunReport> sweepRuns)
-    {
-        return sweepRuns
-            .SelectMany(run => run.FinalMetrics.Select(metric => new
-            {
-                Run = run,
-                Metric = metric
-            }))
-            .GroupBy(item => new
-            {
-                item.Metric.Model,
-                item.Metric.Name,
-                item.Metric.Unit
-            })
-            .OrderBy(group => group.Key.Model)
-            .ThenBy(group => group.Key.Name)
-            .Select(group =>
-            {
-                var higherIsBetter = HigherIsBetter(group.Key.Name);
-                var best = higherIsBetter
-                    ? group.MaxBy(item => item.Metric.Value)!
-                    : group.MinBy(item => item.Metric.Value)!;
-                var worst = higherIsBetter
-                    ? group.MinBy(item => item.Metric.Value)!
-                    : group.MaxBy(item => item.Metric.Value)!;
-                return new SweepBestWorstReport(
-                    group.Key.Model,
-                    group.Key.Name,
-                    group.Key.Unit,
-                    higherIsBetter ? "higher" : "lower",
-                    ToSweepMetricRun(best.Run, best.Metric),
-                    ToSweepMetricRun(worst.Run, worst.Metric));
-            })
-            .ToArray();
-    }
-
-    private static bool HigherIsBetter(string metricName)
-    {
-        return metricName is "Needs Met" or "Trust";
-    }
-
-    private static SweepMetricRunReport ToSweepMetricRun(SweepRunReport run, SweepMetricReport metric)
-    {
-        return new SweepMetricRunReport(
-            run.RunIndex,
-            run.Directory,
-            metric.Value,
-            run.Parameters);
     }
 
     private static string FormatParameters(IReadOnlyDictionary<string, double> parameters)
@@ -640,29 +541,3 @@ internal sealed class CliOptions
         return new KeyValuePair<string, IReadOnlyList<double>>(parts[0], values);
     }
 }
-
-internal sealed record SweepRunReport(
-    int RunIndex,
-    string Directory,
-    IReadOnlyDictionary<string, double> Parameters,
-    IReadOnlyList<SweepMetricReport> FinalMetrics);
-
-internal sealed record SweepMetricReport(
-    string Model,
-    string Name,
-    double Value,
-    string Unit);
-
-internal sealed record SweepBestWorstReport(
-    string Model,
-    string Metric,
-    string Unit,
-    string BestDirection,
-    SweepMetricRunReport Best,
-    SweepMetricRunReport Worst);
-
-internal sealed record SweepMetricRunReport(
-    int RunIndex,
-    string Directory,
-    double Value,
-    IReadOnlyDictionary<string, double> Parameters);

@@ -14,6 +14,8 @@ public sealed class ParameterSweepResponse
         new Dictionary<string, IReadOnlyList<double>>();
 
     public IReadOnlyList<ParameterSweepRunResponse> Runs { get; init; } = [];
+
+    public IReadOnlyList<ParameterSweepBestWorstResponse> BestWorst { get; init; } = [];
 }
 
 public sealed class ParameterSweepRunResponse
@@ -24,4 +26,31 @@ public sealed class ParameterSweepRunResponse
         new Dictionary<string, double>();
 
     public IReadOnlyList<MetricResponse> FinalMetrics { get; init; } = [];
+}
+
+public sealed class ParameterSweepBestWorstResponse
+{
+    public string Model { get; init; } = "";
+
+    public string Metric { get; init; } = "";
+
+    public string Unit { get; init; } = "";
+
+    public string BestDirection { get; init; } = "";
+
+    public ParameterSweepMetricRunResponse Best { get; init; } = new();
+
+    public ParameterSweepMetricRunResponse Worst { get; init; } = new();
+}
+
+public sealed class ParameterSweepMetricRunResponse
+{
+    public int RunIndex { get; init; }
+
+    public string? Directory { get; init; }
+
+    public double Value { get; init; }
+
+    public IReadOnlyDictionary<string, double> Parameters { get; init; } =
+        new Dictionary<string, double>();
 }
