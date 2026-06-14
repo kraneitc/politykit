@@ -198,6 +198,14 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains(stress.Sensitivity.Metrics, metric =>
             metric.ScenarioName == "Village Food Crisis"
             && metric.Parameters.Any(parameter => parameter.Parameter == "needPriorityWeight"));
+        Assert.Equal(["MarketBasedAllocation", "NeedBasedAllocation"], stress.ModelRobustness.Select(summary => summary.Model).Order().ToArray());
+        Assert.All(stress.ModelRobustness, summary =>
+        {
+            Assert.Equal(["Village Food Crisis"], summary.ScenariosTested);
+            Assert.Equal([333, 444], summary.SeedsTested);
+            Assert.Equal(2, summary.RunsCompleted);
+            Assert.Equal("needPriorityWeight", summary.MostSensitiveParameter);
+        });
         Assert.All(stress.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);

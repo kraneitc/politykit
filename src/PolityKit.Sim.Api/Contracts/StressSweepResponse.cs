@@ -29,6 +29,8 @@ public sealed class StressSweepResponse
     public IReadOnlyList<CollapseEvent> CollapseEvents { get; init; } = [];
 
     public SensitivityReport Sensitivity { get; init; } = new([]);
+
+    public IReadOnlyList<ModelRobustnessSummary> ModelRobustness { get; init; } = [];
 }
 
 public sealed class StressSweepRunResponse

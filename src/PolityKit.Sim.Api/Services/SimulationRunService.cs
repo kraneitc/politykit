@@ -150,13 +150,16 @@ public sealed class SimulationRunService(
             };
         }).ToArray();
 
+        var stressRuns = runs.Select(run => run.Analysis).ToArray();
+        var sensitivity = SensitivityAnalysis.BuildReport(stressRuns, plan.BaseParameters);
+
         return new StressSweepResponse
         {
             GridName = plan.GridName,
-            Scenarios = runs.Select(run => run.Analysis.ScenarioName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-            Seeds = runs.Select(run => run.Analysis.Seed).Distinct().Order().ToArray(),
+            Scenarios = stressRuns.Select(run => run.ScenarioName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            Seeds = stressRuns.Select(run => run.Seed).Distinct().Order().ToArray(),
             Ticks = request.Ticks,
-            Models = runs.Select(run => run.Analysis.Model).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            Models = stressRuns.Select(run => run.Model).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             BaseParameters = plan.BaseParameters,
             Sweep = plan.Sweep,
             RunCount = runs.Length,
@@ -168,10 +171,9 @@ public sealed class SimulationRunService(
                     run.Analysis.Parameters,
                     run.Analysis.FinalMetrics))
                 .ToArray())),
-            CollapseEvents = runs.SelectMany(run => run.Analysis.CollapseEvents).ToArray(),
-            Sensitivity = SensitivityAnalysis.BuildReport(
-                runs.Select(run => run.Analysis).ToArray(),
-                plan.BaseParameters)
+            CollapseEvents = stressRuns.SelectMany(run => run.CollapseEvents).ToArray(),
+            Sensitivity = sensitivity,
+            ModelRobustness = RobustnessAnalysis.BuildModelSummaries(stressRuns, sensitivity)
         };
     }
 

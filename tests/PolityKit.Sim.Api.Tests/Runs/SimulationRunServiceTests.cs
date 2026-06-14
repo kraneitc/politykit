@@ -258,6 +258,14 @@ public sealed class SimulationRunServiceTests
         Assert.Equal([111, 222], response.Seeds);
         Assert.NotEmpty(response.BestWorst);
         Assert.NotEmpty(response.CollapseEvents);
+        Assert.Equal(["MarketBasedAllocation", "NeedBasedAllocation"], response.ModelRobustness.Select(summary => summary.Model).Order().ToArray());
+        Assert.All(response.ModelRobustness, summary =>
+        {
+            Assert.Equal(["Service Scenario"], summary.ScenariosTested);
+            Assert.Equal([111, 222], summary.SeedsTested);
+            Assert.Equal(4, summary.RunsCompleted);
+            Assert.Equal("needPriorityWeight", summary.MostSensitiveParameter);
+        });
         Assert.All(response.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);

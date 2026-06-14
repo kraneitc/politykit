@@ -261,9 +261,27 @@ After a run, inspect:
 
 After a sweep, inspect:
 
-- `sweep-summary.json` for every parameter combination, final metrics, and best/worst runs by metric.
+- `sweep-summary.json` for every parameter combination, final metrics, best/worst runs by metric, and a ranked sensitivity report.
 - `sweep-metrics.csv` for a flat table of final metrics by sweep run.
 - `run-001/`, `run-002/`, and so on for full per-combination run bundles.
+
+Run a local stress sweep across scenarios, seeds, models, and parameter values:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- stress \
+  --scenario village-food-crisis \
+  --scenario examples/medicine-shortage.json \
+  --seed 111,222 \
+  --models need-based-allocation,market-based-allocation \
+  --sweep needPriorityWeight=0.75,1.0,1.25 \
+  --out runs/v0-6-stress
+```
+
+After a stress sweep, inspect:
+
+- `stress-summary.json` for collapse events, sensitivity, and model robustness summaries.
+- `stress-metrics.csv` for final metrics by stress run.
+- `modelRobustness` to compare collapse rate, recovery rate, collapse timing, most sensitive parameter, and best/worst scenario names. Treat these as simulation diagnostics for the tested assumptions, not as real-world model rankings.
 
 ### Use the API
 
@@ -384,7 +402,27 @@ $sweep = Invoke-RestMethod `
   } | ConvertTo-Json -Depth 6)
 ```
 
-The sweep response includes each generated run, its parameter combination, and final metrics.
+The sweep response includes each generated run, its parameter combination, final metrics, best/worst metric runs, and sensitivity rankings.
+
+Run a stress sweep from the API:
+
+```powershell
+$stress = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/stress" `
+  -ContentType "application/json" `
+  -Body (@{
+    gridName = "v0-6-stress"
+    scenarios = @("village-food-crisis", "examples/medicine-shortage.json")
+    seeds = @(111, 222)
+    models = @("need-based-allocation", "market-based-allocation")
+    sweep = @{
+      needPriorityWeight = @(0.75, 1.0, 1.25)
+    }
+  } | ConvertTo-Json -Depth 6)
+```
+
+The stress response includes run summaries, collapse events, sensitivity rankings, and `modelRobustness` summaries for comparing models under the tested assumptions.
 
 List all persisted API runs:
 
@@ -411,6 +449,7 @@ GET  /api/runs/{id}/dashboard
 POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}
 POST /api/runs/sweep
+POST /api/runs/stress
 ```
 
 Example run request:
