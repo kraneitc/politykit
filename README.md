@@ -29,13 +29,12 @@ PolityKit includes:
 - Example scenario files under `examples/`.
 - A golden interpreted run bundle under `examples/golden-interpreted-run`.
 - A CLI runner that writes run bundles to disk.
-- An ASP.NET Core API for listing models, metrics, scenarios, and creating/querying simulation runs.
+- An ASP.NET Core API for listing models, metrics, scenarios, creating/querying persisted simulation runs, and retrieving dashboard-ready run data.
 - Automated unit and integration tests for the simulation libraries and API.
 
 Still early / not built yet:
 
 - A richer CLI command surface beyond running simulations and listing models.
-- Persistent run storage beyond the in-memory API store.
 - Frontend dashboards or visualization tools.
 - Real-world calibration or policy-grade validation. The models remain intentionally simplified.
 
@@ -83,7 +82,7 @@ PolityKit/
 - `PolityKit.Sim.Metrics`: metric calculators and metric catalog.
 - `PolityKit.Sim.Scenarios`: built-in scenarios, scenario validation, JSON loading, name resolution, and cloning helpers.
 - `PolityKit.Sim.Cli`: command-line runner for local simulations and run-output files.
-- `PolityKit.Sim.Api`: ASP.NET Core HTTP API for simulation metadata and in-memory run management.
+- `PolityKit.Sim.Api`: ASP.NET Core HTTP API for simulation metadata, file-backed run storage, and dashboard-ready run inspection.
 - `PolityKit.Sim.Tests`: unit tests for core, engine, metrics, models, scenarios, and example files.
 - `PolityKit.Sim.Api.Tests`: API integration tests plus run service, mapper, store, and test-host tests.
 
@@ -292,21 +291,22 @@ $run = Invoke-RestMethod `
 $run
 ```
 
-Fetch the run detail, metrics, and events:
+Fetch the run detail, metrics, events, and dashboard-ready payload:
 
 ```powershell
 Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)"
 Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/metrics"
 Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/events"
+Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/dashboard"
 ```
 
-List all in-memory runs:
+List all persisted API runs:
 
 ```powershell
 Invoke-RestMethod http://localhost:5020/api/runs
 ```
 
-The API run store is currently in memory. Restarting the API clears the run list.
+The API stores run records as JSON files under `data/runs` by default. Configure `RunStorage:Directory` to change the storage location.
 
 ## API Surface
 
@@ -321,6 +321,7 @@ POST /api/runs
 GET  /api/runs/{id}
 GET  /api/runs/{id}/metrics
 GET  /api/runs/{id}/events
+GET  /api/runs/{id}/dashboard
 ```
 
 Example run request:
@@ -342,7 +343,7 @@ Example run request:
 }
 ```
 
-The API currently stores runs in memory. Restarting the API clears stored runs.
+The API stores runs in the configured file-backed run store.
 
 ## Example Scenarios
 

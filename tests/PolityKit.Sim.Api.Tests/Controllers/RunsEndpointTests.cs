@@ -197,10 +197,38 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains(events, simulationEvent => simulationEvent.Type == "ResourceAllocated");
     }
 
+    [Fact]
+    public async Task GetRunDashboardReturnsDashboardReadyPayload()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Ticks = 8,
+            Models = ["need-based-allocation"]
+        });
+
+        var dashboard = await client.GetFromJsonAsync<RunDashboardResponse>($"/api/runs/{created.Id}/dashboard");
+
+        Assert.NotNull(dashboard);
+        Assert.Equal(created.Id, dashboard.Id);
+        Assert.Equal("Village Food Crisis", dashboard.ScenarioName);
+        Assert.Equal(8, dashboard.Ticks);
+        Assert.NotEmpty(dashboard.Metrics);
+        Assert.NotEmpty(dashboard.Events);
+        Assert.Equal("Village Food Crisis", dashboard.Summary.ScenarioName);
+
+        var model = Assert.Single(dashboard.Summary.Models);
+        Assert.Equal("NeedBasedAllocation", model.ModelName);
+        Assert.NotEmpty(model.EventCountsByType);
+        Assert.NotEmpty(model.FinalMetrics);
+    }
+
     [Theory]
     [InlineData("/api/runs/{0}")]
     [InlineData("/api/runs/{0}/metrics")]
     [InlineData("/api/runs/{0}/events")]
+    [InlineData("/api/runs/{0}/dashboard")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
         await using var isolatedFactory = CreateIsolatedFactory();

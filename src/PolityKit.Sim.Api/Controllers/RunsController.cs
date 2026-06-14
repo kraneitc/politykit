@@ -59,4 +59,13 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
             ? NotFound()
             : Ok(RunMappers.ToEvents(storedRun));
     }
+
+    [HttpGet("{id:guid}/dashboard")]
+    public IActionResult GetRunDashboard(Guid id)
+    {
+        var storedRun = runStore.Get(id);
+        return storedRun is null
+            ? NotFound()
+            : Ok(RunMappers.ToDashboardResponse(storedRun));
+    }
 }

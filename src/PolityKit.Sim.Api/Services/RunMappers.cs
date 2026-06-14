@@ -1,5 +1,6 @@
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services.Models;
+using PolityKit.Sim.Engine;
 
 namespace PolityKit.Sim.Api.Services;
 
@@ -46,6 +47,21 @@ public static class RunMappers
                     })
                     .ToArray()
             }).ToArray()
+        };
+    }
+
+    public static RunDashboardResponse ToDashboardResponse(StoredRun run)
+    {
+        return new RunDashboardResponse
+        {
+            Id = run.Id,
+            CreatedAt = run.CreatedAt,
+            ScenarioName = run.Result.ScenarioName,
+            Seed = run.Result.Seed,
+            Ticks = run.Result.Ticks,
+            Summary = SimulationRunSummary.Create(run.Result),
+            Metrics = ToMetrics(run),
+            Events = ToEvents(run)
         };
     }
 

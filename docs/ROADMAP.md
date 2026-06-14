@@ -47,7 +47,7 @@ Current implementation state:
 - `PolityKit.Sim.Metrics` contains five starter metrics: needs met, inequality, trust, severe failures, and administrative load.
 - `PolityKit.Sim.Scenarios` contains built-in scenarios, JSON loading, scenario name resolution, cloning helpers, and validation.
 - `PolityKit.Sim.Cli` can list models and run simulations that emit `config.json`, `metrics.csv`, `events.jsonl`, `citizens-final.csv`, and `summary.json`.
-- `PolityKit.Sim.Api` exposes models, metrics, scenarios, and in-memory simulation runs through HTTP endpoints.
+- `PolityKit.Sim.Api` exposes models, metrics, scenarios, persisted simulation runs, and dashboard-ready run inspection through HTTP endpoints.
 - `examples/` contains JSON scenario files for food, medicine, housing, and corruption stress cases.
 - `tests/` contains unit and API integration coverage for the current stack.
 - The solution targets .NET 10.
@@ -392,7 +392,7 @@ Success criteria:
 
 ### Version 0.3 - Contribution-Friendly Models
 
-Status: started.
+Status: complete for API foundation; dashboard UI remains future work.
 
 Goal: make it easy for contributors to add models.
 
@@ -426,12 +426,8 @@ Already built:
 - API endpoint to list available runs.
 - API endpoint to retrieve run summaries.
 - API endpoint to retrieve metrics and events.
-
-Remaining scope:
-
-- File-backed or otherwise persistent run storage.
-- API support for inspecting completed CLI run bundles.
-- Basic dashboard or dashboard-ready JSON output.
+- File-backed persistent run storage.
+- Dashboard-ready JSON endpoint that combines interpreted summary, metrics, and events.
 
 Success criteria:
 

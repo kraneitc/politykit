@@ -19,6 +19,7 @@ public class Program
         builder.Services.AddControllers();
         builder.Services.AddProblemDetails();
         builder.Services.AddOpenApi();
+        builder.Services.Configure<RunStorageOptions>(builder.Configuration.GetSection("RunStorage"));
 
         builder.Services.AddSingleton<ISimulationEngine, SimulationEngine>();
         builder.Services.AddSingleton<IModelCatalog>(_ => new ModelCatalog());
@@ -27,7 +28,7 @@ public class Program
         builder.Services.AddSingleton<IScenarioValidator, ScenarioValidator>();
         builder.Services.AddSingleton<IScenarioLoader, JsonScenarioLoader>();
         builder.Services.AddSingleton<ScenarioResolver>();
-        builder.Services.AddSingleton<IRunStore, InMemoryRunStore>();
+        builder.Services.AddSingleton<IRunStore, FileRunStore>();
         builder.Services.AddSingleton<SimulationRunService>();
 
         var app = builder.Build();

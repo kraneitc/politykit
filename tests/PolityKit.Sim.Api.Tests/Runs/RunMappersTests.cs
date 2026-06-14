@@ -69,6 +69,25 @@ public sealed class RunMappersTests
             simulationEvent is { Model: "Model B", Type: "UnmetNeeds" });
     }
 
+    [Fact]
+    public void ToDashboardResponseIncludesSummaryMetricsAndEvents()
+    {
+        var run = CreateStoredRun();
+
+        var response = RunMappers.ToDashboardResponse(run);
+
+        Assert.Equal(run.Id, response.Id);
+        Assert.Equal("Scenario A", response.ScenarioName);
+        Assert.Equal(4, response.Metrics.Count);
+        Assert.Equal(3, response.Events.Count);
+        Assert.Equal("Scenario A", response.Summary.ScenarioName);
+        Assert.Equal(["Model A", "Model B"], response.Summary.Models.Select(model => model.ModelName).ToArray());
+
+        var firstModel = response.Summary.Models.Single(model => model.ModelName == "Model A");
+        Assert.Equal(2, firstModel.EventCount);
+        Assert.Contains(firstModel.FinalMetrics, metric => metric.Name == "Needs Met" && metric.Value == 0.9);
+    }
+
     private static StoredRun CreateStoredRun()
     {
         return new StoredRun
