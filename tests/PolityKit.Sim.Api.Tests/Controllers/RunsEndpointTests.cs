@@ -92,6 +92,71 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateSweepReturnsRunSummaryForEachParameterCombination()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var request = new ParameterSweepRequest
+        {
+            Scenario = "village-food-crisis",
+            Seed = 333,
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["fixedWeight"] = 10
+            },
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0, 2.0],
+                ["vulnerabilityPriorityWeight"] = [0.25, 0.5]
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/sweep", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var sweep = await response.Content.ReadFromJsonAsync<ParameterSweepResponse>();
+        Assert.NotNull(sweep);
+        Assert.Equal("Village Food Crisis", sweep.ScenarioName);
+        Assert.Equal(333, sweep.Seed);
+        Assert.Equal(4, sweep.Ticks);
+        Assert.Equal(4, sweep.RunCount);
+        Assert.Equal(4, sweep.Runs.Count);
+        Assert.All(sweep.Runs, run =>
+        {
+            Assert.NotEqual(Guid.Empty, run.Run.Id);
+            Assert.Equal(333, run.Run.Seed);
+            Assert.Equal(["NeedBasedAllocation"], run.Run.Models);
+            Assert.Equal(10, run.Parameters["fixedWeight"]);
+            Assert.NotEmpty(run.FinalMetrics);
+            Assert.Contains(run.FinalMetrics, metric => metric.Name == "Needs Met");
+        });
+
+        var runs = await client.GetFromJsonAsync<RunSummaryResponse[]>("/api/runs");
+        Assert.NotNull(runs);
+        Assert.Equal(4, runs.Length);
+    }
+
+    [Fact]
+    public async Task CreateSweepWithEmptySweepReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/runs/sweep", new ParameterSweepRequest());
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Sweep request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("At least one sweep parameter is required.", problem.Detail);
+    }
+
+    [Fact]
     public async Task GetRunsReturnsCreatedRunsNewestFirst()
     {
         await using var isolatedFactory = CreateIsolatedFactory();

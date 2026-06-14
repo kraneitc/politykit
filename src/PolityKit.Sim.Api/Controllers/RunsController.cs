@@ -33,6 +33,24 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
         }
     }
 
+    [HttpPost("sweep")]
+    public IActionResult CreateSweep([FromBody] ParameterSweepRequest request)
+    {
+        try
+        {
+            return Ok(simulationRunService.CreateSweep(request));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Sweep request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
     [HttpPost("{id:guid}/rerun")]
     public IActionResult Rerun(Guid id, [FromBody] RerunRequest? request)
     {

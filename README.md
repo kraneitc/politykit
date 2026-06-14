@@ -330,6 +330,30 @@ Compare two completed runs:
 Invoke-RestMethod "http://localhost:5020/api/runs/$($run.id)/compare/$($rerun.id)"
 ```
 
+Run a basic parameter sweep:
+
+```powershell
+$sweep = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/sweep" `
+  -ContentType "application/json" `
+  -Body (@{
+    scenario = "village-food-crisis"
+    seed = 12345
+    ticks = 60
+    models = @("need-based-allocation")
+    parameters = @{
+      fixedWeight = 1.0
+    }
+    sweep = @{
+      needPriorityWeight = @(0.75, 1.0, 1.25)
+      vulnerabilityPriorityWeight = @(0.25, 0.5)
+    }
+  } | ConvertTo-Json -Depth 6)
+```
+
+The sweep response includes each generated run, its parameter combination, and final metrics.
+
 List all persisted API runs:
 
 ```powershell
@@ -354,6 +378,7 @@ GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
 POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}
+POST /api/runs/sweep
 ```
 
 Example run request:

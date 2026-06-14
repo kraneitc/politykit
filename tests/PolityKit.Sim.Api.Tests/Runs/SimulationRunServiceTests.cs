@@ -143,6 +143,83 @@ public sealed class SimulationRunServiceTests
     }
 
     [Fact]
+    public void CreateSweepRunsAllParameterCombinations()
+    {
+        var engine = new RecordingSimulationEngine();
+        var store = new InMemoryRunStore();
+        var service = CreateService(engine, store);
+
+        var response = service.CreateSweep(new ParameterSweepRequest
+        {
+            Scenario = "service-scenario",
+            Seed = 777,
+            Ticks = 6,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["fixedWeight"] = 10
+            },
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0, 2.0],
+                ["vulnerabilityPriorityWeight"] = [0.25, 0.5]
+            }
+        });
+
+        Assert.Equal("Service Scenario", response.ScenarioName);
+        Assert.Equal(777, response.Seed);
+        Assert.Equal(6, response.Ticks);
+        Assert.Equal(4, response.RunCount);
+        Assert.Equal(4, response.Runs.Count);
+        Assert.Equal(4, store.List().Count);
+        Assert.Equal(4, engine.Requests.Count);
+        Assert.All(response.Runs, run =>
+        {
+            Assert.Equal(777, run.Run.Seed);
+            Assert.Equal(6, run.Run.Ticks);
+            Assert.Equal(["NeedBasedAllocation"], run.Run.Models);
+            Assert.Equal(10, run.Parameters["fixedWeight"]);
+        });
+
+        var combinations = response.Runs
+            .Select(run => (Need: run.Parameters["needPriorityWeight"], Vulnerability: run.Parameters["vulnerabilityPriorityWeight"]))
+            .ToHashSet();
+        Assert.Equal(4, combinations.Count);
+        Assert.Contains((1.0, 0.25), combinations);
+        Assert.Contains((1.0, 0.5), combinations);
+        Assert.Contains((2.0, 0.25), combinations);
+        Assert.Contains((2.0, 0.5), combinations);
+    }
+
+    [Fact]
+    public void CreateSweepRejectsEmptySweep()
+    {
+        var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            service.CreateSweep(new ParameterSweepRequest()));
+
+        Assert.Equal("At least one sweep parameter is required.", exception.Message);
+    }
+
+    [Fact]
+    public void CreateSweepRejectsParameterWithoutValues()
+    {
+        var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            service.CreateSweep(new ParameterSweepRequest
+            {
+                Sweep = new Dictionary<string, IReadOnlyList<double>>
+                {
+                    ["needPriorityWeight"] = []
+                }
+            }));
+
+        Assert.Equal("Sweep parameter 'needPriorityWeight' must include at least one value.", exception.Message);
+    }
+
+    [Fact]
     public void CreateRunRejectsUnknownModel()
     {
         var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());

@@ -103,6 +103,24 @@ public static class RunMappers
             .ToArray();
     }
 
+    public static IReadOnlyList<MetricResponse> ToFinalMetrics(StoredRun run)
+    {
+        return run.Result.ModelResults
+            .SelectMany(model => model.Metrics
+                .GroupBy(metric => metric.Name)
+                .Select(group => group.OrderByDescending(metric => metric.Tick).First())
+                .OrderBy(metric => metric.Name)
+                .Select(metric => new MetricResponse
+                {
+                    Model = model.ModelName,
+                    Tick = metric.Tick,
+                    Name = metric.Name,
+                    Value = metric.Value,
+                    Unit = metric.Unit
+                }))
+            .ToArray();
+    }
+
     public static IReadOnlyList<EventResponse> ToEvents(StoredRun run)
     {
         return run.Result.ModelResults
