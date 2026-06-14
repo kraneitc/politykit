@@ -1,0 +1,6 @@
+@PolityKit.Sim.Api_HostAddress = http://localhost:5020
+
+GET {{PolityKit.Sim.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

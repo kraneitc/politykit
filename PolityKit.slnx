@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="src/PolityKit.Sim.Api/PolityKit.Sim.Api.csproj" Id="ce9fb27e-02ac-4f52-a10a-09a32f0b389c" />
+  <Project Path="src/PolityKit.Sim.Cli/PolityKit.Sim.Cli.csproj" Id="25fa22ef-b197-441f-afa2-f011776a45f8" />
+  <Project Path="src/PolityKit.Sim.Core/PolityKit.Sim.Core.csproj" Id="e2249e71-6bc0-4c19-a774-8f2f8dbf1a07" />
+  <Project Path="src/PolityKit.Sim.Engine/PolityKit.Sim.Engine.csproj" Id="216d88dc-f8de-4961-8612-869c21887257" />
+  <Project Path="src/PolityKit.Sim.Metrics/PolityKit.Sim.Metrics.csproj" Id="a100e420-0b89-48bb-a159-783cc391346b" />
+  <Project Path="src/PolityKit.Sim.Models/PolityKit.Sim.Models.csproj" Id="309096d0-4c32-4302-8c6b-88ee295017cb" />
+  <Project Path="src/PolityKit.Sim.Scenarios/PolityKit.Sim.Scenarios.csproj" Id="1826bd2b-c00c-4338-956f-9682d9b91a3e" />
+</Solution>
