@@ -7,4 +7,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\PolityKit.Sim.Core\PolityKit.Sim.Core.csproj" />
+    <ProjectReference Include="..\PolityKit.Sim.Engine\PolityKit.Sim.Engine.csproj" />
+    <ProjectReference Include="..\PolityKit.Sim.Metrics\PolityKit.Sim.Metrics.csproj" />
+    <ProjectReference Include="..\PolityKit.Sim.Models\PolityKit.Sim.Models.csproj" />
+  </ItemGroup>
+
 </Project>
