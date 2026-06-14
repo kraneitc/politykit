@@ -1,0 +1,30 @@
+{
+  "name": "Housing Displacement",
+  "seed": 13579,
+  "ticks": 100,
+  "initialPopulation": 420,
+  "initialResources": {
+    "food": 760,
+    "medicine": 140,
+    "housing": 380,
+    "adminCapacity": 70,
+    "productionCapacity": 105
+  },
+  "shocks": [
+    {
+      "tick": 10,
+      "type": "HousingLoss",
+      "severity": 0.35
+    },
+    {
+      "tick": 35,
+      "type": "AdminLoss",
+      "severity": 0.2
+    },
+    {
+      "tick": 65,
+      "type": "MedicineShortage",
+      "severity": 0.2
+    }
+  ]
+}

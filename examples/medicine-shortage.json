@@ -1,0 +1,25 @@
+{
+  "name": "Medicine Shortage",
+  "seed": 24680,
+  "ticks": 90,
+  "initialPopulation": 350,
+  "initialResources": {
+    "food": 700,
+    "medicine": 90,
+    "housing": 340,
+    "adminCapacity": 65,
+    "productionCapacity": 95
+  },
+  "shocks": [
+    {
+      "tick": 15,
+      "type": "MedicineShortage",
+      "severity": 0.5
+    },
+    {
+      "tick": 40,
+      "type": "AdministrativeOverload",
+      "severity": 0.25
+    }
+  ]
+}

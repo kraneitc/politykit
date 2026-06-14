@@ -1,0 +1,25 @@
+{
+  "name": "Corruption Stress",
+  "seed": 98765,
+  "ticks": 80,
+  "initialPopulation": 300,
+  "initialResources": {
+    "food": 620,
+    "medicine": 110,
+    "housing": 290,
+    "adminCapacity": 85,
+    "productionCapacity": 90
+  },
+  "shocks": [
+    {
+      "tick": 20,
+      "type": "CorruptionSpike",
+      "severity": 0.25
+    },
+    {
+      "tick": 50,
+      "type": "CorruptionSpike",
+      "severity": 0.35
+    }
+  ]
+}

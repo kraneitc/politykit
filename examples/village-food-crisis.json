@@ -1,0 +1,25 @@
+{
+  "name": "Village Food Crisis",
+  "seed": 12345,
+  "ticks": 120,
+  "initialPopulation": 500,
+  "initialResources": {
+    "food": 800,
+    "medicine": 120,
+    "housing": 450,
+    "adminCapacity": 80,
+    "productionCapacity": 100
+  },
+  "shocks": [
+    {
+      "tick": 20,
+      "type": "CropFailure",
+      "severity": 0.4
+    },
+    {
+      "tick": 45,
+      "type": "AdministrativeOverload",
+      "severity": 0.3
+    }
+  ]
+}
