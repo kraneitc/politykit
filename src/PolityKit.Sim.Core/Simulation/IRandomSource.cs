@@ -5,6 +5,4 @@ public interface IRandomSource
     int Seed { get; }
 
     int Next(int minValue, int maxValue);
-
-    double NextDouble();
 }

@@ -1,8 +1,6 @@
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services;
-using PolityKit.Sim.Core.Models;
 using PolityKit.Sim.Core.Scenarios;
-using PolityKit.Sim.Core.Simulation;
 using PolityKit.Sim.Core.World;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
@@ -137,7 +135,7 @@ public sealed class SimulationRunServiceTests
     {
         public IReadOnlyList<ScenarioDefinition> All => [scenario];
 
-        public ScenarioDefinition? FindByName(string name)
+        public ScenarioDefinition FindByName(string name)
         {
             return scenario;
         }

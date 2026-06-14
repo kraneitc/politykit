@@ -18,9 +18,7 @@ public sealed class NeedsMetMetric : IMetric
         }
 
         var citizensWithNeedsMet = world.Population.Citizens.Count(citizen =>
-            citizen.FoodNeed == 0 &&
-            citizen.HealthNeed == 0 &&
-            citizen.HousingNeed == 0);
+            citizen is { FoodNeed: 0, HealthNeed: 0, HousingNeed: 0 });
 
         return (double)citizensWithNeedsMet / world.Population.Count;
     }

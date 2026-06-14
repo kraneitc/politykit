@@ -11,7 +11,7 @@ public sealed class JsonScenarioLoader(IScenarioValidator? validator = null) : I
         WriteIndented = true
     };
 
-    private readonly IScenarioValidator validator = validator ?? new ScenarioValidator();
+    private readonly IScenarioValidator _validator = validator ?? new ScenarioValidator();
 
     public ScenarioDefinition Load(string path)
     {
@@ -25,7 +25,7 @@ public sealed class JsonScenarioLoader(IScenarioValidator? validator = null) : I
         var scenario = JsonSerializer.Deserialize<ScenarioDefinition>(File.ReadAllText(path), JsonOptions)
             ?? throw new InvalidOperationException($"Scenario file '{path}' could not be read.");
 
-        var validation = validator.Validate(scenario);
+        var validation = _validator.Validate(scenario);
         if (!validation.IsValid)
         {
             throw new InvalidOperationException($"Scenario file '{path}' is invalid: {string.Join("; ", validation.Errors)}");

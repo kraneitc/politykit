@@ -5,25 +5,15 @@ using PolityKit.Sim.Core.World;
 
 namespace PolityKit.Sim.Engine;
 
-public sealed class SimulationEngine : ISimulationEngine
+public sealed class SimulationEngine(
+    IWorldFactory worldFactory,
+    IWorldRule worldRule,
+    IReadOnlyList<IShockHandler> shockHandlers)
+    : ISimulationEngine
 {
-    private readonly IWorldFactory worldFactory;
-    private readonly IWorldRule worldRule;
-    private readonly IReadOnlyList<IShockHandler> shockHandlers;
-
     public SimulationEngine()
         : this(new DefaultWorldFactory(), new DefaultWorldRule(), [new DefaultShockHandler()])
     {
-    }
-
-    public SimulationEngine(
-        IWorldFactory worldFactory,
-        IWorldRule worldRule,
-        IReadOnlyList<IShockHandler> shockHandlers)
-    {
-        this.worldFactory = worldFactory;
-        this.worldRule = worldRule;
-        this.shockHandlers = shockHandlers;
     }
 
     public SimulationRunResult Run(SimulationRunRequest request)

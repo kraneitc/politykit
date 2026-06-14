@@ -4,20 +4,20 @@ namespace PolityKit.Sim.Models;
 
 public sealed class ModelCatalog(IEnumerable<ISystemModel> models) : IModelCatalog
 {
-    private readonly IReadOnlyList<ISystemModel> models = models.ToArray();
+    private readonly IReadOnlyList<ISystemModel> _models = models.ToArray();
 
     public ModelCatalog()
         : this(DefaultModelSet.Create())
     {
     }
 
-    public IReadOnlyList<ISystemModel> All => models;
+    public IReadOnlyList<ISystemModel> All => _models;
 
     public ISystemModel? FindByName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return models.FirstOrDefault(model =>
+        return _models.FirstOrDefault(model =>
             string.Equals(model.Name, name, StringComparison.OrdinalIgnoreCase)
             || string.Equals(ToKebabCase(model.Name), name, StringComparison.OrdinalIgnoreCase));
     }

@@ -66,9 +66,8 @@ public sealed class WorldStateTests
     [Fact]
     public void EventDataStartsUsable()
     {
-        var simulationEvent = new SimulationEvent();
-
-        simulationEvent.Data["resource"] = ResourceKind.Food;
+        var simulationEvent = new SimulationEvent
+            { Data = { ["resource"] = ResourceKind.Food } };
 
         Assert.Equal(ResourceKind.Food, simulationEvent.Data["resource"]);
     }

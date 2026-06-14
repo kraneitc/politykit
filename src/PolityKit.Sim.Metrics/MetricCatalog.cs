@@ -4,19 +4,19 @@ namespace PolityKit.Sim.Metrics;
 
 public sealed class MetricCatalog(IEnumerable<IMetric> metrics) : IMetricCatalog
 {
-    private readonly IReadOnlyList<IMetric> metrics = metrics.ToArray();
+    private readonly IReadOnlyList<IMetric> _metrics = metrics.ToArray();
 
     public MetricCatalog()
         : this(DefaultMetricSet.Create())
     {
     }
 
-    public IReadOnlyList<IMetric> All => metrics;
+    public IReadOnlyList<IMetric> All => _metrics;
 
     public IMetric? FindByName(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
-        return metrics.FirstOrDefault(metric => string.Equals(metric.Name, name, StringComparison.OrdinalIgnoreCase));
+        return _metrics.FirstOrDefault(metric => string.Equals(metric.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 }

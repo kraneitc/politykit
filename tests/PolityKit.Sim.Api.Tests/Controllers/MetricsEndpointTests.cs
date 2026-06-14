@@ -1,18 +1,11 @@
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
-using PolityKit.Sim.Api;
 
 namespace PolityKit.Sim.Api.Tests.Controllers;
 
-public sealed class MetricsEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class MetricsEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> factory;
-
-    public MetricsEndpointTests(WebApplicationFactory<Program> factory)
-    {
-        this.factory = factory;
-    }
-
     [Fact]
     public async Task GetMetricsReturnsDefaultMetricNames()
     {

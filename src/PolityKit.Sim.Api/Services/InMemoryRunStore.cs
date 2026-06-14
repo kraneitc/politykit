@@ -4,30 +4,30 @@ namespace PolityKit.Sim.Api.Services;
 
 public sealed class InMemoryRunStore : IRunStore
 {
-    private readonly object gate = new();
-    private readonly List<StoredRun> runs = [];
+    private readonly Lock _gate = new();
+    private readonly List<StoredRun> _runs = [];
 
     public IReadOnlyList<StoredRun> List()
     {
-        lock (gate)
+        lock (_gate)
         {
-            return runs.OrderByDescending(run => run.CreatedAt).ToArray();
+            return _runs.OrderByDescending(run => run.CreatedAt).ToArray();
         }
     }
 
     public StoredRun? Get(Guid id)
     {
-        lock (gate)
+        lock (_gate)
         {
-            return runs.FirstOrDefault(run => run.Id == id);
+            return _runs.FirstOrDefault(run => run.Id == id);
         }
     }
 
     public StoredRun Add(StoredRun run)
     {
-        lock (gate)
+        lock (_gate)
         {
-            runs.Add(run);
+            _runs.Add(run);
             return run;
         }
     }

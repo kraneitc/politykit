@@ -7,22 +7,22 @@ public sealed class ScenarioResolver(
     IScenarioLoader? loader = null,
     IScenarioValidator? validator = null)
 {
-    private readonly IScenarioCatalog catalog = catalog ?? new BuiltInScenarioCatalog();
-    private readonly IScenarioLoader loader = loader ?? new JsonScenarioLoader(validator);
-    private readonly IScenarioValidator validator = validator ?? new ScenarioValidator();
+    private readonly IScenarioCatalog _catalog = catalog ?? new BuiltInScenarioCatalog();
+    private readonly IScenarioLoader _loader = loader ?? new JsonScenarioLoader(validator);
+    private readonly IScenarioValidator _validator = validator ?? new ScenarioValidator();
 
     public ScenarioDefinition Resolve(string? nameOrPath)
     {
         var scenario = string.IsNullOrWhiteSpace(nameOrPath)
-            ? catalog.FindByName("village-food-crisis")
-            : catalog.FindByName(nameOrPath) ?? LoadByPath(nameOrPath);
+            ? _catalog.FindByName("village-food-crisis")
+            : _catalog.FindByName(nameOrPath) ?? LoadByPath(nameOrPath);
 
         if (scenario is null)
         {
             throw new InvalidOperationException($"Scenario '{nameOrPath}' was not found.");
         }
 
-        var validation = validator.Validate(scenario);
+        var validation = _validator.Validate(scenario);
         if (!validation.IsValid)
         {
             throw new InvalidOperationException($"Scenario '{scenario.Name}' is invalid: {string.Join("; ", validation.Errors)}");
@@ -34,7 +34,7 @@ public sealed class ScenarioResolver(
     private ScenarioDefinition? LoadByPath(string nameOrPath)
     {
         return File.Exists(nameOrPath)
-            ? loader.Load(nameOrPath)
+            ? _loader.Load(nameOrPath)
             : null;
     }
 }

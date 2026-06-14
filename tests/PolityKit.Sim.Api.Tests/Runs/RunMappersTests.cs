@@ -50,8 +50,8 @@ public sealed class RunMappersTests
         var metrics = RunMappers.ToMetrics(run);
 
         Assert.Equal(4, metrics.Count);
-        Assert.Contains(metrics, metric => metric.Model == "Model A" && metric.Name == "Trust" && metric.Tick == 3);
-        Assert.Contains(metrics, metric => metric.Model == "Model B" && metric.Name == "Needs Met" && metric.Tick == 4);
+        Assert.Contains(metrics, metric => metric is { Model: "Model A", Name: "Trust", Tick: 3 });
+        Assert.Contains(metrics, metric => metric is { Model: "Model B", Name: "Needs Met", Tick: 4 });
     }
 
     [Fact]
@@ -63,12 +63,10 @@ public sealed class RunMappersTests
 
         Assert.Equal(3, events.Count);
         Assert.Contains(events, simulationEvent =>
-            simulationEvent.Model == "Model A"
-            && simulationEvent.Type == "ResourceAllocated"
+            simulationEvent is { Model: "Model A", Type: "ResourceAllocated" }
             && Equals(simulationEvent.Data["amount"], 1));
         Assert.Contains(events, simulationEvent =>
-            simulationEvent.Model == "Model B"
-            && simulationEvent.Type == "UnmetNeeds");
+            simulationEvent is { Model: "Model B", Type: "UnmetNeeds" });
     }
 
     private static StoredRun CreateStoredRun()

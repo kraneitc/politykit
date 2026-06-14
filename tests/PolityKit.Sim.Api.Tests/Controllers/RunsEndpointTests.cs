@@ -2,21 +2,14 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
-using PolityKit.Sim.Api;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Tests.TestHost;
 
 namespace PolityKit.Sim.Api.Tests.Controllers;
 
-public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
+    : IClassFixture<WebApplicationFactory<Program>>
 {
-    private readonly WebApplicationFactory<Program> factory;
-
-    public RunsEndpointTests(WebApplicationFactory<Program> factory)
-    {
-        this.factory = factory;
-    }
-
     [Fact]
     public async Task CreateRunWithDefaultsReturnsCreatedRunDetail()
     {
@@ -101,7 +94,7 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetRunsReturnsCreatedRunsNewestFirst()
     {
-        using var isolatedFactory = CreateIsolatedFactory();
+        await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
 
         var first = await CreateRunAsync(client, new CreateRunRequest
@@ -133,7 +126,7 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetRunReturnsCreatedRunById()
     {
-        using var isolatedFactory = CreateIsolatedFactory();
+        await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
         var created = await CreateRunAsync(client, new CreateRunRequest
         {
@@ -158,7 +151,7 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetRunMetricsReturnsMetricsForCreatedRun()
     {
-        using var isolatedFactory = CreateIsolatedFactory();
+        await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
         var created = await CreateRunAsync(client, new CreateRunRequest
         {
@@ -183,7 +176,7 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
     [Fact]
     public async Task GetRunEventsReturnsEventsForCreatedRun()
     {
-        using var isolatedFactory = CreateIsolatedFactory();
+        await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
         var created = await CreateRunAsync(client, new CreateRunRequest
         {
@@ -210,7 +203,7 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
     [InlineData("/api/runs/{0}/events")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
-        using var isolatedFactory = CreateIsolatedFactory();
+        await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
         var route = string.Format(routeTemplate, Guid.NewGuid());
 
