@@ -4,7 +4,6 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/src/" />
   <Folder Name="/tests/">
     <Project Path="tests/PolityKit.Sim.Api.Tests/PolityKit.Sim.Api.Tests.csproj" />
     <Project Path="tests/PolityKit.Sim.Tests/PolityKit.Sim.Tests.csproj" />
