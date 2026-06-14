@@ -1,3 +1,5 @@
+using PolityKit.Sim.Analysis;
+
 namespace PolityKit.Sim.Api.Contracts;
 
 public sealed class StressSweepResponse
@@ -23,6 +25,8 @@ public sealed class StressSweepResponse
     public IReadOnlyList<StressSweepRunResponse> Runs { get; init; } = [];
 
     public IReadOnlyList<ParameterSweepBestWorstResponse> BestWorst { get; init; } = [];
+
+    public IReadOnlyList<CollapseEvent> CollapseEvents { get; init; } = [];
 }
 
 public sealed class StressSweepRunResponse
@@ -43,4 +47,6 @@ public sealed class StressSweepRunResponse
         new Dictionary<string, double>();
 
     public IReadOnlyList<MetricResponse> FinalMetrics { get; init; } = [];
+
+    public IReadOnlyList<CollapseEvent> CollapseEvents { get; init; } = [];
 }

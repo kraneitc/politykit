@@ -1,4 +1,4 @@
-
+using System.Text.Json.Serialization;
 using PolityKit.Sim.Api.Services;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
@@ -16,7 +16,8 @@ public class Program
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
 
-        builder.Services.AddControllers();
+        builder.Services.AddControllers()
+            .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddProblemDetails();
         builder.Services.AddOpenApi();
         builder.Services.Configure<RunStorageOptions>(builder.Configuration.GetSection("RunStorage"));

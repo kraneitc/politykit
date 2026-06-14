@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Core.Models;
@@ -16,7 +17,8 @@ internal static class Program
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
-        WriteIndented = true
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public static int Main(string[] args)
@@ -124,6 +126,7 @@ internal static class Program
             Models = modelNames,
             Parameters = options.Parameters,
             Sweep = options.Sweeps,
+            FailureCriteria = options.FailureCriteria,
             MaxRuns = options.MaxRuns
         });
 
@@ -150,6 +153,8 @@ internal static class Program
             var runDirectory = Path.Combine(outputDirectory, runDirectoryName);
             Directory.CreateDirectory(runDirectory);
             WriteRunBundle(runDirectory, result, scenario, models, metrics, runPlan.Parameters);
+            var finalMetrics = SweepAnalysis.SelectFinalMetrics(result);
+            var collapseEvents = FailureAnalysis.DetectCollapses(result, options.FailureCriteria);
 
             stressRuns.Add(new StressSweepRunResult(
                 runPlan.RunIndex,
@@ -160,7 +165,8 @@ internal static class Program
                 result.Ticks,
                 result.ModelResults.Single().ModelName,
                 runPlan.Parameters,
-                SweepAnalysis.SelectFinalMetrics(result)));
+                finalMetrics,
+                collapseEvents));
         }
 
         var bestWorst = SweepAnalysis.BuildBestWorst(stressRuns
@@ -175,7 +181,8 @@ internal static class Program
             plan.Sweep,
             stressRuns.Count,
             stressRuns,
-            bestWorst);
+            bestWorst,
+            stressRuns.SelectMany(run => run.CollapseEvents).ToArray());
 
         WriteStressMetricsCsv(Path.Combine(outputDirectory, "stress-metrics.csv"), stressRuns);
         WriteJson(Path.Combine(outputDirectory, "stress-summary.json"), stressResult);
@@ -551,6 +558,7 @@ internal static class Program
           --out <directory>          Output directory. Default: runs/<scenario>-<seed>
           --param <key=value>        Model parameter override. May be repeated
           --sweep <key=v1,v2>        Sweep parameter values. May be repeated
+          --failure <criterion>      Failure criterion, e.g. "Needs Met<0.5" or "Severe Failures>=10%"
           --grid-name <name>          Optional stress parameter grid name
           --max-runs <number>         Optional stress run limit. Default: 512
 
@@ -586,6 +594,8 @@ internal sealed class CliOptions
 
     public int? MaxRuns { get; private init; }
 
+    public IReadOnlyList<FailureCriterion>? FailureCriteria { get; private init; }
+
     public IReadOnlyDictionary<string, double> Parameters { get; private init; } = new Dictionary<string, double>();
 
     public IReadOnlyDictionary<string, IReadOnlyList<double>> Sweeps { get; private init; } =
@@ -603,6 +613,7 @@ internal sealed class CliOptions
         var showHelp = false;
         string? gridName = null;
         int? maxRuns = null;
+        var failureCriteria = new List<FailureCriterion>();
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -635,6 +646,9 @@ internal sealed class CliOptions
                     var sweep = ReadSweep(ReadRequiredValue(args, ref index, "--sweep"));
                     sweeps[sweep.Key] = sweep.Value;
                     break;
+                case "--failure":
+                    failureCriteria.Add(ReadFailureCriterion(ReadRequiredValue(args, ref index, "--failure")));
+                    break;
                 case "--grid-name":
                     gridName = ReadRequiredValue(args, ref index, "--grid-name");
                     break;
@@ -658,6 +672,7 @@ internal sealed class CliOptions
             ShowHelp = showHelp,
             GridName = gridName,
             MaxRuns = maxRuns,
+            FailureCriteria = failureCriteria.Count == 0 ? null : failureCriteria,
             Parameters = parameters,
             Sweeps = sweeps
         };
@@ -720,5 +735,58 @@ internal sealed class CliOptions
         }
 
         return new KeyValuePair<string, IReadOnlyList<double>>(parts[0], values);
+    }
+
+    private static FailureCriterion ReadFailureCriterion(string value)
+    {
+        var operators = new[]
+        {
+            (Text: "<=", Operator: FailureOperator.LessThanOrEqual),
+            (Text: ">=", Operator: FailureOperator.GreaterThanOrEqual),
+            (Text: "<", Operator: FailureOperator.LessThan),
+            (Text: ">", Operator: FailureOperator.GreaterThan)
+        };
+
+        foreach (var candidate in operators)
+        {
+            var operatorIndex = value.IndexOf(candidate.Text, StringComparison.Ordinal);
+            if (operatorIndex < 0)
+            {
+                continue;
+            }
+
+            var metric = value[..operatorIndex].Trim();
+            var thresholdText = value[(operatorIndex + candidate.Text.Length)..].Trim();
+            var recoveryTicks = 1;
+            var recoverySeparator = thresholdText.LastIndexOf(':');
+            if (recoverySeparator >= 0)
+            {
+                recoveryTicks = int.Parse(thresholdText[(recoverySeparator + 1)..], CultureInfo.InvariantCulture);
+                thresholdText = thresholdText[..recoverySeparator].Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(metric) || string.IsNullOrWhiteSpace(thresholdText))
+            {
+                throw new InvalidOperationException("Failure criteria must use metric<value, metric<=value, metric>value, or metric>=value format.");
+            }
+
+            var thresholdKind = thresholdText.EndsWith('%')
+                ? FailureThresholdKind.PopulationShare
+                : FailureThresholdKind.Absolute;
+            if (thresholdKind == FailureThresholdKind.PopulationShare)
+            {
+                thresholdText = thresholdText[..^1];
+            }
+
+            var threshold = double.Parse(thresholdText, CultureInfo.InvariantCulture);
+            if (thresholdKind == FailureThresholdKind.PopulationShare)
+            {
+                threshold /= 100;
+            }
+
+            return new FailureCriterion(metric, candidate.Operator, threshold, thresholdKind, recoveryTicks);
+        }
+
+        throw new InvalidOperationException("Failure criteria must use metric<value, metric<=value, metric>value, or metric>=value format.");
     }
 }

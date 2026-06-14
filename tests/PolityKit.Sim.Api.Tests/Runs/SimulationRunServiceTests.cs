@@ -1,3 +1,4 @@
+using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Services;
 using PolityKit.Sim.Core.Metrics;
@@ -7,6 +8,7 @@ using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
 using PolityKit.Sim.Models;
 using PolityKit.Sim.Scenarios;
+using ApiStressSweepRequest = PolityKit.Sim.Api.Contracts.StressSweepRequest;
 
 namespace PolityKit.Sim.Api.Tests.Runs;
 
@@ -233,7 +235,7 @@ public sealed class SimulationRunServiceTests
         var store = new InMemoryRunStore();
         var service = CreateService(engine, store);
 
-        var response = service.CreateStress(new StressSweepRequest
+        var response = service.CreateStress(new ApiStressSweepRequest
         {
             Scenarios = ["service-scenario"],
             Seeds = [111, 222],
@@ -255,6 +257,7 @@ public sealed class SimulationRunServiceTests
         Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation"], response.Models);
         Assert.Equal([111, 222], response.Seeds);
         Assert.NotEmpty(response.BestWorst);
+        Assert.NotEmpty(response.CollapseEvents);
         Assert.All(response.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);
@@ -262,6 +265,7 @@ public sealed class SimulationRunServiceTests
             Assert.Equal(10, run.Parameters["fixedWeight"]);
             Assert.Single(run.Run.Models);
             Assert.Single(run.FinalMetrics);
+            Assert.NotEmpty(run.CollapseEvents);
         });
 
         var dimensions = response.Runs
@@ -273,12 +277,35 @@ public sealed class SimulationRunServiceTests
     }
 
     [Fact]
+    public void CreateStressUsesConfiguredFailureCriteria()
+    {
+        var engine = new RecordingSimulationEngine();
+        var service = CreateService(engine, new InMemoryRunStore());
+
+        var response = service.CreateStress(new ApiStressSweepRequest
+        {
+            Scenarios = ["service-scenario"],
+            Seeds = [111],
+            Models = ["need-based-allocation"],
+            FailureCriteria =
+            [
+                new FailureCriterion("Needs Met", FailureOperator.LessThan, 1.5)
+            ]
+        });
+
+        var collapse = Assert.Single(response.CollapseEvents);
+        Assert.Equal("Needs Met", collapse.Metric);
+        Assert.True(collapse.Collapsed);
+        Assert.Equal(9, collapse.CollapseTick);
+    }
+
+    [Fact]
     public void CreateStressRejectsOverLimitRequest()
     {
         var service = CreateService(new RecordingSimulationEngine(), new InMemoryRunStore());
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            service.CreateStress(new StressSweepRequest
+            service.CreateStress(new ApiStressSweepRequest
             {
                 Scenarios = ["service-scenario"],
                 Seeds = [1, 2],

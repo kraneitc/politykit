@@ -104,6 +104,7 @@ public sealed class SimulationRunService(
             Models = requestedModels,
             Parameters = request.Parameters,
             Sweep = request.Sweep,
+            FailureCriteria = request.FailureCriteria,
             MaxRuns = request.MaxRuns
         });
 
@@ -115,6 +116,7 @@ public sealed class SimulationRunService(
             var model = SelectModels([runPlan.Model]);
             var storedRun = RunAndStore(scenario, runPlan.Seed, ticks, model, runPlan.Parameters);
             var finalMetrics = SweepAnalysis.SelectFinalMetrics(storedRun.Result);
+            var collapseEvents = FailureAnalysis.DetectCollapses(storedRun.Result, request.FailureCriteria);
 
             return new
             {
@@ -127,7 +129,8 @@ public sealed class SimulationRunService(
                     storedRun.Result.Ticks,
                     storedRun.Result.ModelResults.Single().ModelName,
                     runPlan.Parameters,
-                    finalMetrics),
+                    finalMetrics,
+                    collapseEvents),
                 Response = new StressSweepRunResponse
                 {
                     RunIndex = runPlan.RunIndex,
@@ -137,7 +140,8 @@ public sealed class SimulationRunService(
                     Ticks = storedRun.Result.Ticks,
                     Model = storedRun.Result.ModelResults.Single().ModelName,
                     Parameters = runPlan.Parameters,
-                    FinalMetrics = RunMappers.ToMetricResponses(finalMetrics)
+                    FinalMetrics = RunMappers.ToMetricResponses(finalMetrics),
+                    CollapseEvents = collapseEvents
                 }
             };
         }).ToArray();
@@ -159,7 +163,8 @@ public sealed class SimulationRunService(
                     null,
                     run.Analysis.Parameters,
                     run.Analysis.FinalMetrics))
-                .ToArray()))
+                .ToArray())),
+            CollapseEvents = runs.SelectMany(run => run.Analysis.CollapseEvents).ToArray()
         };
     }
 

@@ -1,3 +1,5 @@
+using PolityKit.Sim.Analysis;
+
 namespace PolityKit.Sim.Api.Contracts;
 
 public sealed class StressSweepRequest
@@ -15,6 +17,8 @@ public sealed class StressSweepRequest
     public IReadOnlyDictionary<string, double>? Parameters { get; init; }
 
     public IReadOnlyDictionary<string, IReadOnlyList<double>>? Sweep { get; init; }
+
+    public IReadOnlyList<FailureCriterion>? FailureCriteria { get; init; }
 
     public int? MaxRuns { get; init; }
 }

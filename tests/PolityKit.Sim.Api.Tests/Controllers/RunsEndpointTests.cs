@@ -188,6 +188,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal([333, 444], stress.Seeds);
         Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation"], stress.Models);
         Assert.NotEmpty(stress.BestWorst);
+        Assert.NotEmpty(stress.CollapseEvents);
         Assert.All(stress.Runs, run =>
         {
             Assert.NotEqual(Guid.Empty, run.Run.Id);
@@ -195,6 +196,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
             Assert.Equal(4, run.Ticks);
             Assert.Single(run.Run.Models);
             Assert.NotEmpty(run.FinalMetrics);
+            Assert.NotEmpty(run.CollapseEvents);
         });
 
         var runs = await client.GetFromJsonAsync<RunSummaryResponse[]>("/api/runs");

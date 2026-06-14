@@ -114,6 +114,8 @@ public sealed class StressSweepRequest
 
     public IReadOnlyDictionary<string, IReadOnlyList<double>>? Sweep { get; init; }
 
+    public IReadOnlyList<FailureCriterion>? FailureCriteria { get; init; }
+
     public int? MaxRuns { get; init; }
 }
 
@@ -142,7 +144,8 @@ public sealed record StressSweepResult(
     IReadOnlyDictionary<string, IReadOnlyList<double>> Sweep,
     int RunCount,
     IReadOnlyList<StressSweepRunResult> Runs,
-    IReadOnlyList<SweepBestWorstReport> BestWorst);
+    IReadOnlyList<SweepBestWorstReport> BestWorst,
+    IReadOnlyList<CollapseEvent> CollapseEvents);
 
 public sealed record StressSweepRunResult(
     int RunIndex,
@@ -153,4 +156,5 @@ public sealed record StressSweepRunResult(
     int Ticks,
     string Model,
     IReadOnlyDictionary<string, double> Parameters,
-    IReadOnlyList<SweepMetricReport> FinalMetrics);
+    IReadOnlyList<SweepMetricReport> FinalMetrics,
+    IReadOnlyList<CollapseEvent> CollapseEvents);
