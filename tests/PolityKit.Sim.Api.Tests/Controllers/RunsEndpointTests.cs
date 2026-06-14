@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PolityKit.Sim.Api;
 using PolityKit.Sim.Api.Contracts;
+using PolityKit.Sim.Api.Tests.TestHost;
 
 namespace PolityKit.Sim.Api.Tests.Controllers;
 
@@ -95,5 +96,142 @@ public sealed class RunsEndpointTests : IClassFixture<WebApplicationFactory<Prog
         Assert.Equal("Run request is invalid.", problem.Title);
         Assert.Equal(400, problem.Status);
         Assert.Contains("Unknown model 'unknown-model'.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task GetRunsReturnsCreatedRunsNewestFirst()
+    {
+        using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var first = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 111,
+            Ticks = 2,
+            Models = ["need-based-allocation"]
+        });
+        await Task.Delay(10);
+        var second = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 222,
+            Ticks = 3,
+            Models = ["market-based-allocation"]
+        });
+
+        var runs = await client.GetFromJsonAsync<RunSummaryResponse[]>("/api/runs");
+
+        Assert.NotNull(runs);
+        Assert.Equal([second.Id, first.Id], runs.Select(run => run.Id).ToArray());
+        Assert.Equal(222, runs[0].Seed);
+        Assert.Equal(3, runs[0].Ticks);
+        Assert.Equal(["MarketBasedAllocation"], runs[0].Models);
+        Assert.Equal(111, runs[1].Seed);
+        Assert.Equal(2, runs[1].Ticks);
+        Assert.Equal(["NeedBasedAllocation"], runs[1].Models);
+    }
+
+    [Fact]
+    public async Task GetRunReturnsCreatedRunById()
+    {
+        using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 4,
+            Models = ["hierarchy-based-allocation"]
+        });
+
+        var fetched = await client.GetFromJsonAsync<RunDetailResponse>($"/api/runs/{created.Id}");
+
+        Assert.NotNull(fetched);
+        Assert.Equal(created.Id, fetched.Id);
+        Assert.Equal("Village Food Crisis", fetched.ScenarioName);
+        Assert.Equal(333, fetched.Seed);
+        Assert.Equal(4, fetched.Ticks);
+
+        var model = Assert.Single(fetched.Models);
+        Assert.Equal("HierarchyBasedAllocation", model.ModelName);
+        Assert.NotEmpty(model.FinalMetrics);
+    }
+
+    [Fact]
+    public async Task GetRunMetricsReturnsMetricsForCreatedRun()
+    {
+        using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Ticks = 3,
+            Models = ["need-based-allocation"]
+        });
+
+        var metrics = await client.GetFromJsonAsync<MetricResponse[]>($"/api/runs/{created.Id}/metrics");
+
+        Assert.NotNull(metrics);
+        Assert.NotEmpty(metrics);
+        Assert.All(metrics, metric =>
+        {
+            Assert.Equal("NeedBasedAllocation", metric.Model);
+            Assert.InRange(metric.Tick, 0, 2);
+            Assert.False(string.IsNullOrWhiteSpace(metric.Name));
+        });
+        Assert.Contains(metrics, metric => metric.Name == "Needs Met");
+        Assert.Contains(metrics, metric => metric.Name == "Trust");
+    }
+
+    [Fact]
+    public async Task GetRunEventsReturnsEventsForCreatedRun()
+    {
+        using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Ticks = 3,
+            Models = ["need-based-allocation"]
+        });
+
+        var events = await client.GetFromJsonAsync<EventResponse[]>($"/api/runs/{created.Id}/events");
+
+        Assert.NotNull(events);
+        Assert.NotEmpty(events);
+        Assert.All(events, simulationEvent =>
+        {
+            Assert.Equal("NeedBasedAllocation", simulationEvent.Model);
+            Assert.InRange(simulationEvent.Tick, 0, 2);
+            Assert.False(string.IsNullOrWhiteSpace(simulationEvent.Type));
+        });
+        Assert.Contains(events, simulationEvent => simulationEvent.Type == "ResourceAllocated");
+    }
+
+    [Theory]
+    [InlineData("/api/runs/{0}")]
+    [InlineData("/api/runs/{0}/metrics")]
+    [InlineData("/api/runs/{0}/events")]
+    public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
+    {
+        using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var route = string.Format(routeTemplate, Guid.NewGuid());
+
+        var response = await client.GetAsync(route);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private WebApplicationFactory<Program> CreateIsolatedFactory()
+    {
+        return factory.WithIsolatedRunStore();
+    }
+
+    private static async Task<RunDetailResponse> CreateRunAsync(HttpClient client, CreateRunRequest request)
+    {
+        var response = await client.PostAsJsonAsync("/api/runs", request);
+        response.EnsureSuccessStatusCode();
+
+        var run = await response.Content.ReadFromJsonAsync<RunDetailResponse>();
+        Assert.NotNull(run);
+
+        return run;
     }
 }
