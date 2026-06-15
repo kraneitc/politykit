@@ -469,9 +469,11 @@ Success criteria:
 
 ### Version 0.7 - Composite Governance Presets
 
+Status: implemented.
+
 Goal: move from simple allocation models to richer governance bundles.
 
-Features:
+Built:
 
 - Composable governance dimensions:
   - Allocation mechanism.
@@ -480,8 +482,13 @@ Features:
   - Information flow.
   - Property regime.
   - Appeal process.
-- Presets for common system types.
-- Comparison against mechanical baseline models.
+- Preset catalog with simplified experimental bundles.
+- Preset-backed `CompositeGovernance:<preset-id>` models registered in the model catalog.
+- CLI and API model selection by preset ID.
+- API model metadata for preset assumptions, governance dimensions, and known failure modes.
+- Comparison workflows against mechanical baseline models.
+- Mixed baseline-plus-preset stress examples and acceptance coverage.
+- Documentation for interpreting preset labels as assumptions rather than real-world claims.
 
 Success criteria:
 

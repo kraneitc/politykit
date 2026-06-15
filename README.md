@@ -50,6 +50,7 @@ PolityKit/
     add-model.md
     add-scenario.md
     contributing.md
+    governance-presets.md
     ROADMAP.md
     scenarios.md
     scenario.schema.json
@@ -604,6 +605,21 @@ Each model exposes a manifest with assumptions and known failure modes.
 
 Composite governance presets appear as `CompositeGovernance:<preset-id>` models. They are simplified bundles of governance dimensions, not claims about real societies. Their manifests include both preset-level assumptions and per-dimension assumptions such as allocation mechanism, decision authority, accountability, information flow, property regime, and appeal process.
 
+See [Governance presets](docs/governance-presets.md) for the current preset list, manifest interpretation rules, and wording boundaries for comparing presets against baseline models.
+
+### Governance Presets
+
+Governance presets let users compare bundles of declared assumptions without turning a single label into a whole model. Current preset IDs include:
+
+- `participatory-commons`
+- `regulated-market`
+- `central-planning`
+- `patronage-hierarchy`
+- `mutual-aid-federation`
+- `technocratic-administration`
+
+Treat these IDs as experiment names. A preset result means "under this scenario, seed, model version, and declared assumptions, this behavior emerged." It does not mean the preset label describes or evaluates a real-world society.
+
 ### Engine
 
 For each selected model, the engine:
@@ -688,6 +704,8 @@ Under this scenario, using this model, with these assumptions, this behavior eme
 
 The most interesting results are often patterns: sudden collapse after a threshold, slow decline hidden by short-term stability, fairness paired with administrative load, or fast crisis response paired with poor long-term trust.
 
+Governance preset results need the same caution. A preset label is shorthand for a manifest, not an argument about the real world. Compare the selected dimensions, assumptions, failure modes, scenario, seed, and parameter grid before drawing conclusions.
+
 ## Contributing
 
 Useful contribution areas include:
@@ -707,6 +725,7 @@ Contributor docs:
 
 - [Contributing guide](docs/contributing.md)
 - [How to add a model](docs/add-model.md)
+- [Governance presets](docs/governance-presets.md)
 - [How to add a metric](docs/add-metric.md)
 - [How to add a scenario](docs/add-scenario.md)
 - [Scenario format reference](docs/scenarios.md)

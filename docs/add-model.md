@@ -116,7 +116,15 @@ Every model should expose:
 
 If the model reads `context.Parameters`, each parameter should appear in the manifest with the same name and default value.
 
-Use a baseline model when you are adding a new mechanical decision rule, such as a different allocation algorithm. Use a governance preset when you are composing existing governance dimensions into a named experimental bundle. Preset labels should describe simplified assumptions, not real-world systems.
+Use a baseline model when you are adding a new mechanical decision rule, such as a different allocation algorithm. Use a governance preset when you are composing existing governance dimensions into a named experimental bundle. Preset labels should describe simplified assumptions, not real-world systems. See [Governance presets](governance-presets.md) for interpretation boundaries and current preset conventions.
+
+## Baseline Model Or Governance Preset?
+
+Choose a baseline model when the change introduces a distinct decision rule that should stand on its own for direct comparison. Examples include a new allocation formula, a new institutional action strategy, or a model that intentionally changes how decisions are made at each tick.
+
+Choose a governance preset when the change recombines existing governance dimensions into a named experimental bundle. A preset should make its dimensions, assumptions, and known failure modes visible in the manifest.
+
+Avoid using preset names as real-world claims. A preset name is a compact handle for a simulation profile, not a verdict about a society or institution.
 
 ## Decision Guidelines
 

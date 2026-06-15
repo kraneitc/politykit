@@ -15,6 +15,7 @@ The project is intentionally small at this stage. A good contribution should kee
 ## Contributor Guides
 
 - [How to add a model](add-model.md)
+- [Governance presets](governance-presets.md)
 - [How to add a metric](add-metric.md)
 - [How to add a scenario](add-scenario.md)
 - [Scenario format reference](scenarios.md)
@@ -110,4 +111,3 @@ Avoid:
 ```text
 This system is better.
 ```
-
