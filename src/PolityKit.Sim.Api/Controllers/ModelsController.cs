@@ -7,7 +7,9 @@ namespace PolityKit.Sim.Api.Controllers;
 
 [ApiController]
 [Route("api/models")]
-public sealed class ModelsController(IModelCatalog modelCatalog) : ControllerBase
+public sealed class ModelsController(
+    IModelCatalog modelCatalog,
+    GovernancePresetCatalog governancePresetCatalog) : ControllerBase
 {
     [HttpGet]
     public IActionResult GetModels()
@@ -15,7 +17,7 @@ public sealed class ModelsController(IModelCatalog modelCatalog) : ControllerBas
         return Ok(modelCatalog.All.Select(ToResponse));
     }
 
-    private static ModelResponse ToResponse(ISystemModel model)
+    private ModelResponse ToResponse(ISystemModel model)
     {
         if (model is not AllocationModelBase allocationModel)
         {
@@ -31,6 +33,7 @@ public sealed class ModelsController(IModelCatalog modelCatalog) : ControllerBas
         {
             Name = model.Name,
             Version = model.Version,
+            Kind = model is CompositeGovernanceModel ? "governance-preset" : "baseline",
             Description = manifest.Description,
             Assumptions = manifest.Assumptions.Select(assumption => new AssumptionResponse
             {
@@ -38,7 +41,36 @@ public sealed class ModelsController(IModelCatalog modelCatalog) : ControllerBas
                 Default = assumption.Default,
                 Description = assumption.Description
             }).ToArray(),
-            KnownFailureModes = manifest.KnownFailureModes
+            KnownFailureModes = manifest.KnownFailureModes,
+            Preset = ToPresetResponse(model)
+        };
+    }
+
+    private GovernancePresetResponse? ToPresetResponse(ISystemModel model)
+    {
+        if (model is not CompositeGovernanceModel compositeModel)
+        {
+            return null;
+        }
+
+        var preset = governancePresetCatalog.FindById(compositeModel.Profile.Id);
+        if (preset is null)
+        {
+            return new GovernancePresetResponse
+            {
+                Id = compositeModel.Profile.Id,
+                Name = compositeModel.Profile.Name,
+                Description = compositeModel.Profile.Description
+            };
+        }
+
+        return new GovernancePresetResponse
+        {
+            Id = preset.Id,
+            Name = preset.Name,
+            Description = preset.Description,
+            Assumptions = preset.Assumptions,
+            KnownFailureModes = preset.KnownFailureModes
         };
     }
 }

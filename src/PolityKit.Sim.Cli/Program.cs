@@ -290,6 +290,12 @@ internal static class Program
         var catalog = new ModelCatalog();
         foreach (var model in catalog.All)
         {
+            if (model is CompositeGovernanceModel compositeModel)
+            {
+                Console.WriteLine($"{model.Name} ({model.Version}) preset:{compositeModel.Profile.Id}");
+                continue;
+            }
+
             Console.WriteLine($"{model.Name} ({model.Version})");
         }
 
@@ -556,7 +562,7 @@ internal static class Program
 
         Run options:
           --scenario <name-or-file>  Scenario name or JSON file. Default: village-food-crisis
-          --models <names>           Comma-separated model names. Default: all
+          --models <names>           Comma-separated model names, preset IDs, or preset:<id>. Default: all
           --seed <number[,number]>    Override scenario seed. May be repeated for stress
           --ticks <number>           Override scenario tick count
           --out <directory>          Output directory. Default: runs/<scenario>-<seed>
@@ -569,6 +575,7 @@ internal static class Program
         Examples:
           PolityKit.Sim.Cli run
           PolityKit.Sim.Cli run --models need-based-allocation,market-based-allocation --seed 12345 --ticks 120
+          PolityKit.Sim.Cli run --models preset:regulated-market,participatory-commons
           PolityKit.Sim.Cli run --scenario examples/village-food-crisis.json --out runs/village-food-crisis-12345
           PolityKit.Sim.Cli sweep --models need-based-allocation --sweep needPriorityWeight=0.75,1.0,1.25
           PolityKit.Sim.Cli stress --scenario village-food-crisis --seed 111,222 --models need-based-allocation,market-based-allocation --sweep needPriorityWeight=0.75,1.0

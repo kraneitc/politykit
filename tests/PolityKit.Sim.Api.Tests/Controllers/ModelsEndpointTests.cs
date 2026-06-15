@@ -19,4 +19,21 @@ public sealed class ModelsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains(models, model => model.Name == "MarketBasedAllocation");
         Assert.Contains(models, model => model.Name == "HierarchyBasedAllocation");
     }
+
+    [Fact]
+    public async Task GetModelsReturnsGovernancePresetMetadata()
+    {
+        var client = factory.CreateClient();
+
+        var models = await client.GetFromJsonAsync<ModelResponse[]>("/api/models");
+
+        Assert.NotNull(models);
+        var model = Assert.Single(models, candidate => candidate.Name == "CompositeGovernance:regulated-market");
+        Assert.Equal("governance-preset", model.Kind);
+        Assert.NotNull(model.Preset);
+        Assert.Equal("regulated-market", model.Preset.Id);
+        Assert.Equal("Regulated Market", model.Preset.Name);
+        Assert.NotEmpty(model.Preset.Assumptions);
+        Assert.NotEmpty(model.Preset.KnownFailureModes);
+    }
 }

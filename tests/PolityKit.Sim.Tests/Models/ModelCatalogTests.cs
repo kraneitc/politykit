@@ -17,6 +17,21 @@ public sealed class ModelCatalogTests
     }
 
     [Fact]
+    public void DefaultCatalogIncludesGovernancePresetModels()
+    {
+        var catalog = new ModelCatalog();
+
+        var names = catalog.All.Select(model => model.Name).ToArray();
+
+        Assert.Contains("CompositeGovernance:participatory-commons", names);
+        Assert.Contains("CompositeGovernance:regulated-market", names);
+        Assert.Contains("CompositeGovernance:central-planning", names);
+        Assert.Contains("CompositeGovernance:patronage-hierarchy", names);
+        Assert.Contains("CompositeGovernance:mutual-aid-federation", names);
+        Assert.Contains("CompositeGovernance:technocratic-administration", names);
+    }
+
+    [Fact]
     public void FindByNameAcceptsKebabCaseNames()
     {
         var catalog = new ModelCatalog();
@@ -36,6 +51,23 @@ public sealed class ModelCatalogTests
 
         Assert.NotNull(model);
         Assert.Equal("MarketBasedAllocation", model.Name);
+    }
+
+    [Theory]
+    [InlineData("regulated-market")]
+    [InlineData("preset:regulated-market")]
+    [InlineData("Regulated Market")]
+    [InlineData("CompositeGovernance:regulated-market")]
+    public void FindByNameAcceptsGovernancePresetSelectors(string selector)
+    {
+        var catalog = new ModelCatalog();
+
+        var model = catalog.FindByName(selector);
+
+        Assert.NotNull(model);
+        Assert.Equal("CompositeGovernance:regulated-market", model.Name);
+        var compositeModel = Assert.IsType<CompositeGovernanceModel>(model);
+        Assert.Equal("regulated-market", compositeModel.Profile.Id);
     }
 
     [Fact]

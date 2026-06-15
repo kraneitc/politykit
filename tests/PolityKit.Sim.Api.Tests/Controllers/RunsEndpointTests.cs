@@ -72,6 +72,28 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateRunAcceptsGovernancePresetStableId()
+    {
+        var client = factory.CreateClient();
+        var request = new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["regulated-market"]
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs", request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var run = await response.Content.ReadFromJsonAsync<RunDetailResponse>();
+        Assert.NotNull(run);
+        var model = Assert.Single(run.Models);
+        Assert.Equal("CompositeGovernance:regulated-market", model.ModelName);
+        Assert.NotEmpty(model.FinalMetrics);
+    }
+
+    [Fact]
     public async Task CreateRunWithUnknownModelReturnsBadRequestProblemDetails()
     {
         var client = factory.CreateClient();

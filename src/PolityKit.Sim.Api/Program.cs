@@ -23,7 +23,8 @@ public class Program
         builder.Services.Configure<RunStorageOptions>(builder.Configuration.GetSection("RunStorage"));
 
         builder.Services.AddSingleton<ISimulationEngine, SimulationEngine>();
-        builder.Services.AddSingleton<IModelCatalog>(_ => new ModelCatalog());
+        builder.Services.AddSingleton(_ => new GovernancePresetCatalog());
+        builder.Services.AddSingleton<IModelCatalog>(sp => new ModelCatalog(sp.GetRequiredService<GovernancePresetCatalog>()));
         builder.Services.AddSingleton<IMetricCatalog>(_ => new MetricCatalog());
         builder.Services.AddSingleton<IScenarioCatalog, BuiltInScenarioCatalog>();
         builder.Services.AddSingleton<IScenarioValidator, ScenarioValidator>();

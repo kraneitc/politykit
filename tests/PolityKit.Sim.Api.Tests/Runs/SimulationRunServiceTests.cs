@@ -29,7 +29,10 @@ public sealed class SimulationRunServiceTests
         Assert.Same(storedRun, store.Get(storedRun.Id));
         Assert.NotNull(engine.LastRequest);
         Assert.Equal("Service Scenario", engine.LastRequest.Scenario.Name);
-        Assert.Equal(["NeedBasedAllocation", "MarketBasedAllocation", "HierarchyBasedAllocation"], engine.LastRequest.Models.Select(model => model.Name).ToArray());
+        Assert.Contains("NeedBasedAllocation", engine.LastRequest.Models.Select(model => model.Name));
+        Assert.Contains("MarketBasedAllocation", engine.LastRequest.Models.Select(model => model.Name));
+        Assert.Contains("HierarchyBasedAllocation", engine.LastRequest.Models.Select(model => model.Name));
+        Assert.Contains("CompositeGovernance:participatory-commons", engine.LastRequest.Models.Select(model => model.Name));
         Assert.Equal(["Needs Met", "Inequality", "Trust", "Severe Failures", "Administrative Load"], engine.LastRequest.Metrics.Select(metric => metric.Name).ToArray());
         Assert.Empty(engine.LastRequest.Parameters);
     }
@@ -60,6 +63,25 @@ public sealed class SimulationRunServiceTests
         var model = Assert.Single(engine.LastRequest.Models);
         Assert.Equal("NeedBasedAllocation", model.Name);
         Assert.Same(parameters, engine.LastRequest.Parameters);
+    }
+
+    [Theory]
+    [InlineData("regulated-market")]
+    [InlineData("preset:regulated-market")]
+    public void CreateRunAcceptsGovernancePresetSelectors(string selector)
+    {
+        var engine = new RecordingSimulationEngine();
+        var service = CreateService(engine, new InMemoryRunStore());
+
+        service.CreateRun(new CreateRunRequest
+        {
+            Scenario = "service-scenario",
+            Models = [selector]
+        });
+
+        Assert.NotNull(engine.LastRequest);
+        var model = Assert.Single(engine.LastRequest.Models);
+        Assert.Equal("CompositeGovernance:regulated-market", model.Name);
     }
 
     [Fact]
