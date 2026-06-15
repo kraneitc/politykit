@@ -205,7 +205,34 @@ public sealed class CompositeGovernanceModelTests
         Assert.Contains("Test Profile", model.Manifest.Description);
         Assert.Contains(model.Manifest.Assumptions, assumption => assumption.Name == "allocation-mechanism");
         Assert.Contains(model.Manifest.Assumptions, assumption => assumption.Description.Contains("Need Weighted"));
+        Assert.Equal(6, model.Manifest.GovernanceDimensions.Count);
+        Assert.Contains(model.Manifest.GovernanceDimensions, dimension =>
+            dimension.DimensionId == "allocation-mechanism"
+            && dimension.ValueId == "need-weighted"
+            && dimension.Assumption == "Allocation priority follows Need Weighted."
+            && dimension.KnownFailureModes.Contains("need-weighted allocation depends on accurate and timely need information"));
         Assert.Contains(model.Manifest.KnownFailureModes, mode => mode == "profile labels are simplified bundles of assumptions");
+    }
+
+    [Fact]
+    public void PresetManifestInheritsPresetAndDimensionFailureModes()
+    {
+        var preset = new GovernancePresetCatalog().FindById("regulated-market")!;
+        var model = new CompositeGovernanceModel(preset);
+
+        Assert.Contains(model.Manifest.Assumptions, assumption =>
+            assumption.Name == "preset-assumption-1"
+            && assumption.Description == "price signals carry useful information about scarcity");
+        Assert.Contains(model.Manifest.KnownFailureModes, mode =>
+            mode == "wealth differences can still dominate access when scarcity is severe");
+        Assert.Contains(model.Manifest.KnownFailureModes, mode =>
+            mode == "wealth-weighted allocation can exclude low-wealth citizens during scarcity");
+
+        var allocation = Assert.Single(model.Manifest.GovernanceDimensions, dimension =>
+            dimension.DimensionId == "allocation-mechanism");
+        Assert.Equal("market-price-weighted", allocation.ValueId);
+        Assert.Equal("Market Price Weighted", allocation.ValueName);
+        Assert.NotEmpty(allocation.KnownFailureModes);
     }
 
     [Fact]

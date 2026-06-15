@@ -284,6 +284,8 @@ Each model should include a manifest that explains its purpose and assumptions.
 }
 ```
 
+Composite governance presets extend this shape with `governanceDimensions`. Each entry names the selected dimension and value, records the dimension-level assumption, and lists failure modes that come from that dimension. Baseline allocation models can leave `governanceDimensions` empty.
+
 ## Output Format
 
 Early versions should use simple files rather than a database.

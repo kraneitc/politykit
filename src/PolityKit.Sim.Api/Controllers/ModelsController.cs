@@ -41,6 +41,17 @@ public sealed class ModelsController(
                 Default = assumption.Default,
                 Description = assumption.Description
             }).ToArray(),
+            GovernanceDimensions = manifest.GovernanceDimensions.Select(dimension => new GovernanceDimensionResponse
+            {
+                DimensionId = dimension.DimensionId,
+                DimensionName = dimension.DimensionName,
+                ValueId = dimension.ValueId,
+                ValueName = dimension.ValueName,
+                Description = dimension.Description,
+                Assumption = dimension.Assumption,
+                Parameters = dimension.Parameters,
+                KnownFailureModes = dimension.KnownFailureModes
+            }).ToArray(),
             KnownFailureModes = manifest.KnownFailureModes,
             Preset = ToPresetResponse(model)
         };

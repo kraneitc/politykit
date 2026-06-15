@@ -10,6 +10,19 @@ public sealed class CompositeGovernanceModel : AllocationModelBase
     private readonly GovernanceProfile _profile;
 
     public CompositeGovernanceModel(GovernanceProfile profile)
+        : this(profile, [], [])
+    {
+    }
+
+    public CompositeGovernanceModel(GovernancePreset preset)
+        : this(GetProfile(preset), preset.Assumptions, preset.KnownFailureModes)
+    {
+    }
+
+    private CompositeGovernanceModel(
+        GovernanceProfile profile,
+        IReadOnlyList<string> presetAssumptions,
+        IReadOnlyList<string> presetKnownFailureModes)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -20,7 +33,7 @@ public sealed class CompositeGovernanceModel : AllocationModelBase
         }
 
         _profile = profile;
-        Manifest = BuildManifest(profile);
+        Manifest = BuildManifest(profile, presetAssumptions, presetKnownFailureModes);
     }
 
     public GovernanceProfile Profile => _profile;
@@ -224,33 +237,171 @@ public sealed class CompositeGovernanceModel : AllocationModelBase
             : defaultValue;
     }
 
-    private static ModelManifest BuildManifest(GovernanceProfile profile)
+    private static ModelManifest BuildManifest(
+        GovernanceProfile profile,
+        IReadOnlyList<string> presetAssumptions,
+        IReadOnlyList<string> presetKnownFailureModes)
     {
+        var dimensionManifests = profile.Dimensions()
+            .Select(dimension => new GovernanceDimensionManifest
+            {
+                DimensionId = dimension.Dimension.GetId(),
+                DimensionName = dimension.Dimension.GetDisplayName(),
+                ValueId = dimension.Id,
+                ValueName = dimension.DisplayName,
+                Description = dimension.Description,
+                Assumption = BuildDimensionAssumption(dimension),
+                Parameters = profile.DimensionParameters.TryGetValue(dimension.Dimension, out var parameters)
+                    ? new Dictionary<string, double>(parameters)
+                    : new Dictionary<string, double>(),
+                KnownFailureModes = DimensionFailureModes(dimension)
+            })
+            .ToList();
+
+        var dimensionAssumptions = dimensionManifests
+            .Select(dimension => new ModelAssumption
+            {
+                Name = dimension.DimensionId,
+                Default = 1.0,
+                Description = $"{dimension.DimensionName}: {dimension.ValueName}. {dimension.Description}".Trim()
+            });
+        var presetModelAssumptions = presetAssumptions.Select((assumption, index) => new ModelAssumption
+        {
+            Name = $"preset-assumption-{index + 1}",
+            Default = 1.0,
+            Description = assumption
+        });
+
         return new ModelManifest
         {
             Model = $"CompositeGovernance:{profile.Id}",
             Version = "0.1.0",
             Description = $"Composite governance model for profile '{profile.Name}'. {profile.Description}".Trim(),
-            Assumptions = profile.Dimensions()
-                .Select(dimension => new ModelAssumption
-                {
-                    Name = dimension.Dimension.GetId(),
-                    Default = 1.0,
-                    Description = $"{dimension.Dimension.GetDisplayName()}: {dimension.DisplayName}. {dimension.Description}".Trim()
-                })
-                .ToList(),
-            KnownFailureModes =
-            [
+            Assumptions = dimensionAssumptions.Concat(presetModelAssumptions).ToList(),
+            GovernanceDimensions = dimensionManifests,
+            KnownFailureModes = DistinctPreservingOrder([
                 "dimension interactions can amplify unintended priorities",
                 "administrative load can rise when accountability or appeals are strong",
-                "profile labels are simplified bundles of assumptions"
-            ]
+                "profile labels are simplified bundles of assumptions",
+                .. presetKnownFailureModes,
+                .. dimensionManifests.SelectMany(dimension => dimension.KnownFailureModes)
+            ])
         };
+    }
+
+    private static string BuildDimensionAssumption(GovernanceDimensionValue dimension)
+    {
+        return dimension.Dimension switch
+        {
+            GovernanceDimension.AllocationMechanism => $"Allocation priority follows {dimension.DisplayName}.",
+            GovernanceDimension.DecisionAuthority => $"Decision authority is exercised through {dimension.DisplayName}.",
+            GovernanceDimension.AccountabilityMechanism => $"Accountability is provided by {dimension.DisplayName}.",
+            GovernanceDimension.InformationFlow => $"Decision makers observe conditions through {dimension.DisplayName}.",
+            GovernanceDimension.PropertyRegime => $"Resource control follows {dimension.DisplayName}.",
+            GovernanceDimension.AppealProcess => $"Disputed outcomes are handled through {dimension.DisplayName}.",
+            _ => $"{dimension.Dimension.GetDisplayName()} uses {dimension.DisplayName}."
+        };
+    }
+
+    private static IReadOnlyList<string> DimensionFailureModes(GovernanceDimensionValue dimension)
+    {
+        var id = dimension.Id;
+        return dimension.Dimension switch
+        {
+            GovernanceDimension.AllocationMechanism when ContainsAny(id, "market", "price", "wealth") =>
+            [
+                "wealth-weighted allocation can exclude low-wealth citizens during scarcity"
+            ],
+            GovernanceDimension.AllocationMechanism when ContainsAny(id, "rank", "hierarchy", "patronage") =>
+            [
+                "rank-weighted allocation can persistently under-serve low-power citizens"
+            ],
+            GovernanceDimension.AllocationMechanism when ContainsAny(id, "need", "ration") =>
+            [
+                "need-weighted allocation depends on accurate and timely need information"
+            ],
+            GovernanceDimension.DecisionAuthority when ContainsAny(id, "participatory", "assembly") =>
+            [
+                "participatory authority can increase coordination time during fast shocks"
+            ],
+            GovernanceDimension.DecisionAuthority when ContainsAny(id, "central", "bureau") =>
+            [
+                "central authority can miss local conditions when feedback is weak"
+            ],
+            GovernanceDimension.DecisionAuthority when ContainsAny(id, "local", "federated", "delegated") =>
+            [
+                "federated authority can produce uneven local capacity"
+            ],
+            GovernanceDimension.AccountabilityMechanism when ContainsAny(id, "none", "weak") =>
+            [
+                "weak accountability can let allocation failures persist"
+            ],
+            GovernanceDimension.AccountabilityMechanism when ContainsAny(id, "audit", "oversight", "recall") =>
+            [
+                "strong accountability can raise administrative load"
+            ],
+            GovernanceDimension.InformationFlow when ContainsAny(id, "opaque", "restricted") =>
+            [
+                "restricted information can hide emerging unmet needs"
+            ],
+            GovernanceDimension.InformationFlow when ContainsAny(id, "transparent", "open", "feedback") =>
+            [
+                "transparent feedback can increase reporting burden"
+            ],
+            GovernanceDimension.PropertyRegime when ContainsAny(id, "private", "market") =>
+            [
+                "private control can concentrate access under unequal wealth"
+            ],
+            GovernanceDimension.PropertyRegime when ContainsAny(id, "commons", "communal") =>
+            [
+                "commons pooling can strain coordination when scarcity is acute"
+            ],
+            GovernanceDimension.PropertyRegime when ContainsAny(id, "state", "public") =>
+            [
+                "public control can become brittle when planning information is wrong"
+            ],
+            GovernanceDimension.AppealProcess when ContainsAny(id, "none", "closed") =>
+            [
+                "closed appeals can leave errors uncorrected"
+            ],
+            GovernanceDimension.AppealProcess when ContainsAny(id, "formal", "review", "appeal") =>
+            [
+                "formal appeals can be too slow for urgent needs"
+            ],
+            GovernanceDimension.AppealProcess when ContainsAny(id, "informal") =>
+            [
+                "informal appeals can be inconsistent across groups"
+            ],
+            _ => []
+        };
+    }
+
+    private static List<string> DistinctPreservingOrder(IEnumerable<string> values)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<string>();
+
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value) && seen.Add(value))
+            {
+                result.Add(value);
+            }
+        }
+
+        return result;
     }
 
     private static string IdOf(GovernanceDimensionValue? value)
     {
         return value?.Id ?? "";
+    }
+
+    private static GovernanceProfile GetProfile(GovernancePreset preset)
+    {
+        ArgumentNullException.ThrowIfNull(preset);
+
+        return preset.Profile;
     }
 
     private static bool ContainsAny(string value, params string[] tokens)

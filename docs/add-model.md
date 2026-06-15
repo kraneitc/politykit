@@ -111,9 +111,12 @@ Every model should expose:
 | `Version` | Update when behavior or assumptions change. |
 | `Description` | Say what decision rule the model uses. |
 | `Assumptions` | List tunable weights and important fixed premises. |
+| `GovernanceDimensions` | For composite governance presets, list each selected dimension, its value, assumption, parameters, and dimension-specific failure modes. Leave empty for ordinary baseline models. |
 | `KnownFailureModes` | Name where this model is expected to degrade. |
 
 If the model reads `context.Parameters`, each parameter should appear in the manifest with the same name and default value.
+
+Use a baseline model when you are adding a new mechanical decision rule, such as a different allocation algorithm. Use a governance preset when you are composing existing governance dimensions into a named experimental bundle. Preset labels should describe simplified assumptions, not real-world systems.
 
 ## Decision Guidelines
 
@@ -172,4 +175,3 @@ Inspect:
 - `summary.json` for final metrics and notable changes.
 - `metrics.csv` for the metric series.
 - `events.jsonl` for allocation and failure events.
-

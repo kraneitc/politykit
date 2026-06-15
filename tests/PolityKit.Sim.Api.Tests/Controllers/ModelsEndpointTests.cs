@@ -35,5 +35,15 @@ public sealed class ModelsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal("Regulated Market", model.Preset.Name);
         Assert.NotEmpty(model.Preset.Assumptions);
         Assert.NotEmpty(model.Preset.KnownFailureModes);
+        Assert.Equal(6, model.GovernanceDimensions.Count);
+        Assert.Contains(model.Assumptions, assumption => assumption.Name == "preset-assumption-1");
+        Assert.Contains(model.KnownFailureModes, mode => mode == "wealth differences can still dominate access when scarcity is severe");
+        Assert.Contains(model.KnownFailureModes, mode => mode == "wealth-weighted allocation can exclude low-wealth citizens during scarcity");
+
+        var allocation = Assert.Single(model.GovernanceDimensions, dimension =>
+            dimension.DimensionId == "allocation-mechanism");
+        Assert.Equal("market-price-weighted", allocation.ValueId);
+        Assert.Equal("Allocation priority follows Market Price Weighted.", allocation.Assumption);
+        Assert.NotEmpty(allocation.KnownFailureModes);
     }
 }

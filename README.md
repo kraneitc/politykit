@@ -534,6 +534,8 @@ A system model decides how a simulated society responds to current world conditi
 
 Each model exposes a manifest with assumptions and known failure modes.
 
+Composite governance presets appear as `CompositeGovernance:<preset-id>` models. They are simplified bundles of governance dimensions, not claims about real societies. Their manifests include both preset-level assumptions and per-dimension assumptions such as allocation mechanism, decision authority, accountability, information flow, property regime, and appeal process.
+
 ### Engine
 
 For each selected model, the engine:

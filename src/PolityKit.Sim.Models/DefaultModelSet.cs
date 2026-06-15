@@ -16,7 +16,7 @@ public static class DefaultModelSet
             new NeedBasedAllocation(),
             new MarketBasedAllocation(),
             new HierarchyBasedAllocation(),
-            .. governancePresetCatalog.All.Select(preset => new CompositeGovernanceModel(preset.Profile))
+            .. governancePresetCatalog.All.Select(preset => new CompositeGovernanceModel(preset))
         ];
     }
 }
