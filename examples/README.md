@@ -24,6 +24,8 @@ Known shock types currently handled by the engine include:
 
 The golden bundle was generated from `interpretability-demo.json` and is useful when changing summary or event-log behavior.
 
+The [stress](stress) folder contains workflow examples for comparing baseline allocation models with composite governance presets. These examples produce `stress-summary.json` files with `modelRobustness` entries for both model families.
+
 Example future CLI usage:
 
 ```bash

@@ -314,6 +314,67 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateStressComparesBaselinesAndGovernancePresets()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var request = new StressSweepRequest
+        {
+            GridName = "baseline-preset-comparison",
+            Scenarios = ["village-food-crisis"],
+            Seeds = [111, 222],
+            Ticks = 4,
+            Models =
+            [
+                "need-based-allocation",
+                "market-based-allocation",
+                "hierarchy-based-allocation",
+                "participatory-commons",
+                "regulated-market"
+            ],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needWeightMultiplier"] = [0.8, 1.2]
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var stress = await response.Content.ReadFromJsonAsync<StressSweepResponse>();
+        Assert.NotNull(stress);
+        Assert.Equal("baseline-preset-comparison", stress.GridName);
+        Assert.Equal(20, stress.RunCount);
+        Assert.Equal(20, stress.Runs.Count);
+        Assert.Equal(
+            [
+                "NeedBasedAllocation",
+                "MarketBasedAllocation",
+                "HierarchyBasedAllocation",
+                "CompositeGovernance:participatory-commons",
+                "CompositeGovernance:regulated-market"
+            ],
+            stress.Models);
+        Assert.NotEmpty(stress.BestWorst);
+        Assert.NotEmpty(stress.Sensitivity.Metrics);
+        Assert.Equal(stress.Models.Order().ToArray(), stress.ModelRobustness.Select(summary => summary.Model).Order().ToArray());
+        Assert.All(stress.ModelRobustness, summary =>
+        {
+            Assert.Equal(["Village Food Crisis"], summary.ScenariosTested);
+            Assert.Equal([111, 222], summary.SeedsTested);
+            Assert.Equal(4, summary.RunsCompleted);
+            Assert.Equal("needWeightMultiplier", summary.MostSensitiveParameter);
+        });
+        Assert.All(stress.Runs, run =>
+        {
+            Assert.Single(run.Run.Models);
+            Assert.NotEmpty(run.FinalMetrics);
+            Assert.Contains(run.FinalMetrics, metric => metric.Name == "Needs Met");
+        });
+    }
+
+    [Fact]
     public async Task CreateStressOverLimitReturnsBadRequestProblemDetails()
     {
         await using var isolatedFactory = CreateIsolatedFactory();

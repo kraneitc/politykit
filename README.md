@@ -203,6 +203,17 @@ dotnet run --project src/PolityKit.Sim.Cli -- run \
   --out runs/food-crisis-compare
 ```
 
+Compare a governance preset against the three mechanical baseline models:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- run \
+  --scenario examples/village-food-crisis.json \
+  --models need-based-allocation,market-based-allocation,hierarchy-based-allocation,participatory-commons \
+  --seed 20260614 \
+  --ticks 60 \
+  --out runs/food-crisis-baseline-preset-compare
+```
+
 PowerShell version:
 
 ```powershell
@@ -277,11 +288,43 @@ dotnet run --project src/PolityKit.Sim.Cli -- stress \
   --out runs/v0-6-stress
 ```
 
+Run a stress sweep that compares baseline models with multiple governance presets across existing challenge scenarios:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- stress \
+  --grid-name baseline-preset-comparison \
+  --scenario examples/medicine-shortage.json \
+  --scenario examples/corruption-stress.json \
+  --seed 111,222 \
+  --models need-based-allocation,market-based-allocation,hierarchy-based-allocation,participatory-commons,regulated-market,technocratic-administration \
+  --sweep needWeightMultiplier=0.8,1.0,1.2 \
+  --out runs/baseline-preset-comparison-stress
+```
+
 After a stress sweep, inspect:
 
 - `stress-summary.json` for collapse events, sensitivity, and model robustness summaries.
 - `stress-metrics.csv` for final metrics by stress run.
 - `modelRobustness` to compare collapse rate, recovery rate, collapse timing, most sensitive parameter, and best/worst scenario names. Treat these as simulation diagnostics for the tested assumptions, not as real-world model rankings.
+
+For mixed baseline-plus-preset stress runs, `modelRobustness` uses the same summary shape for both families:
+
+```json
+{
+  "modelRobustness": [
+    {
+      "model": "NeedBasedAllocation",
+      "runsCompleted": 12,
+      "mostSensitiveParameter": "needWeightMultiplier"
+    },
+    {
+      "model": "CompositeGovernance:participatory-commons",
+      "runsCompleted": 12,
+      "mostSensitiveParameter": "needWeightMultiplier"
+    }
+  ]
+}
+```
 
 ### Use the API
 
@@ -423,6 +466,31 @@ $stress = Invoke-RestMethod `
 ```
 
 The stress response includes run summaries, collapse events, sensitivity rankings, and `modelRobustness` summaries for comparing models under the tested assumptions.
+
+API stress requests can mix baseline names and preset IDs:
+
+```powershell
+$stress = Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/stress" `
+  -ContentType "application/json" `
+  -Body (@{
+    gridName = "baseline-preset-comparison"
+    scenarios = @("village-food-crisis")
+    seeds = @(111, 222)
+    ticks = 60
+    models = @(
+      "need-based-allocation",
+      "market-based-allocation",
+      "hierarchy-based-allocation",
+      "participatory-commons",
+      "regulated-market"
+    )
+    sweep = @{
+      needWeightMultiplier = @(0.8, 1.0, 1.2)
+    }
+  } | ConvertTo-Json -Depth 6)
+```
 
 List all persisted API runs:
 
