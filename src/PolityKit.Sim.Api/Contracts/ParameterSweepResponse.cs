@@ -20,6 +20,8 @@ public sealed class ParameterSweepResponse
     public IReadOnlyList<ParameterSweepBestWorstResponse> BestWorst { get; init; } = [];
 
     public SensitivityReport Sensitivity { get; init; } = new([]);
+
+    public AiAnalysisUsage AiAnalysis { get; init; } = AiAnalysisUsage.NotUsed();
 }
 
 public sealed class ParameterSweepRunResponse

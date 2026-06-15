@@ -31,6 +31,8 @@ public sealed class StressSweepResponse
     public SensitivityReport Sensitivity { get; init; } = new([]);
 
     public IReadOnlyList<ModelRobustnessSummary> ModelRobustness { get; init; } = [];
+
+    public AiAnalysisUsage AiAnalysis { get; init; } = AiAnalysisUsage.NotUsed();
 }
 
 public sealed class StressSweepRunResponse

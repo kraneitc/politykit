@@ -30,12 +30,14 @@ PolityKit includes:
 - A golden interpreted run bundle under `examples/golden-interpreted-run`.
 - A CLI runner that writes run bundles to disk.
 - An ASP.NET Core API for listing models, metrics, scenarios, creating/querying persisted simulation runs, and retrieving dashboard-ready run data.
+- Documented AI boundaries that keep AI analysis optional, advisory, and separate from authoritative simulation data.
 - Automated unit and integration tests for the simulation libraries and API.
 
 Still early / not built yet:
 
 - A richer CLI command surface beyond running simulations and listing models.
 - Frontend dashboards or visualization tools.
+- AI provider integrations or generated advisory summaries.
 - Real-world calibration or policy-grade validation. The models remain intentionally simplified.
 
 ## Repository Layout
@@ -163,6 +165,7 @@ CLI run output:
 ```text
 runs/village-food-crisis-12345/
   config.json
+  ai-analysis.json
   metrics.csv
   events.jsonl
   citizens-final.csv
@@ -266,6 +269,7 @@ dotnet run --project src/PolityKit.Sim.Cli -- sweep `
 After a run, inspect:
 
 - `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
+- `ai-analysis.json` for whether advisory AI analysis was used. Default simulation runs record `used: false`.
 - `metrics.csv` for metric values by tick.
 - `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
 - `citizens-final.csv` for final citizen state.
@@ -501,6 +505,10 @@ Invoke-RestMethod http://localhost:5020/api/runs
 
 The API stores run records as JSON files under `data/runs` by default. Configure `RunStorage:Directory` to change the storage location.
 
+API run, sweep, stress, and comparison responses include `aiAnalysis`. By default this records `used: false`; AI-generated text, if added later, must stay advisory and record provenance rather than becoming authoritative simulation data.
+
+See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, and privacy note for data sent to external providers.
+
 ## API Surface
 
 The current API exposes:
@@ -685,6 +693,10 @@ Every run records:
 - Metrics.
 - Event log.
 - Final citizen state.
+
+### Keep AI Advisory
+
+AI analysis is optional and never required to run simulations. AI output may help explain or propose follow-up artifacts, but it is not simulation data and must not change deterministic run results. Any AI-assisted artifact should record whether AI was used, the input run IDs or files it read, and the provider/model that generated the text.
 
 ## Interpreting Results
 

@@ -86,6 +86,7 @@ internal static class Program
 
         var outputDirectory = ResolveOutputDirectory(options.OutputDirectory, scenario.Name, result.Seed);
         WriteRunBundle(outputDirectory, result, scenario, models, metrics, options.Parameters);
+        WriteAiAnalysisUsage(outputDirectory);
 
         Console.WriteLine($"Wrote run output to {outputDirectory}");
         Console.WriteLine($"Scenario: {result.ScenarioName}");
@@ -189,6 +190,7 @@ internal static class Program
 
         WriteStressMetricsCsv(Path.Combine(outputDirectory, "stress-metrics.csv"), stressRuns);
         WriteJson(Path.Combine(outputDirectory, "stress-summary.json"), stressResult);
+        WriteAiAnalysisUsage(outputDirectory);
 
         Console.WriteLine($"Wrote stress output to {outputDirectory}");
         Console.WriteLine($"Scenarios: {string.Join(", ", stressResult.Scenarios)}");
@@ -273,8 +275,10 @@ internal static class Program
                 finalMetrics = run.FinalMetrics
             }),
             bestWorst,
-            sensitivity = SensitivityAnalysis.BuildReport(scenario.Name, sweepRuns, options.Parameters)
+            sensitivity = SensitivityAnalysis.BuildReport(scenario.Name, sweepRuns, options.Parameters),
+            aiAnalysis = AiAnalysisUsage.NotUsed()
         });
+        WriteAiAnalysisUsage(outputDirectory);
 
         Console.WriteLine($"Wrote sweep output to {outputDirectory}");
         Console.WriteLine($"Scenario: {scenario.Name}");
@@ -389,7 +393,8 @@ internal static class Program
                 model.Version
             }),
             metrics = metrics.Select(metric => metric.Name),
-            parameters
+            parameters,
+            aiAnalysis = AiAnalysisUsage.NotUsed()
         });
 
         WriteMetricsCsv(Path.Combine(outputDirectory, "metrics.csv"), result);
@@ -510,6 +515,11 @@ internal static class Program
     private static void WriteJson(string path, object value)
     {
         File.WriteAllText(path, JsonSerializer.Serialize(value, JsonOptions));
+    }
+
+    private static void WriteAiAnalysisUsage(string outputDirectory)
+    {
+        WriteJson(Path.Combine(outputDirectory, "ai-analysis.json"), AiAnalysisUsage.NotUsed());
     }
 
     private static string FormatParameters(IReadOnlyDictionary<string, double> parameters)

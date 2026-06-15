@@ -1,3 +1,5 @@
+using PolityKit.Sim.Analysis;
+
 namespace PolityKit.Sim.Api.Contracts;
 
 public sealed class RunDetailResponse
@@ -13,4 +15,6 @@ public sealed class RunDetailResponse
     public int Ticks { get; init; }
 
     public IReadOnlyList<ModelRunSummaryResponse> Models { get; init; } = [];
+
+    public AiAnalysisUsage AiAnalysis { get; init; } = AiAnalysisUsage.NotUsed();
 }

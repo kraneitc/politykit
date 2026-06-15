@@ -72,6 +72,8 @@ Given the same scenario, seed, model list, model parameters, and tick count, a r
 
 Avoid wall-clock time, unseeded randomness, external services, hidden local state, or nondeterministic ordering in simulation logic.
 
+AI-assisted analysis must remain outside the deterministic simulation path. Do not require AI configuration for run, sweep, stress, or comparison workflows, and do not let AI output modify model decisions, world rules, metrics, or stored run results. See [AI boundaries and safety](ai-boundaries.md).
+
 ### Keep The Engine Neutral
 
 System-specific behavior belongs in model implementations. Shared mechanics belong in the engine and world rules.

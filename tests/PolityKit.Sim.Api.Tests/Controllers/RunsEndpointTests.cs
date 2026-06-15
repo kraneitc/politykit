@@ -718,6 +718,69 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains(comparisonResponse.MetricDeltas, delta => delta.Metric == "Needs Met");
     }
 
+    [Fact]
+    public async Task RunSweepStressAndComparisonWorkWithoutAiConfiguration()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var baseline = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 3,
+            Models = ["need-based-allocation"]
+        });
+        var comparison = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Seed = 333,
+            Ticks = 3,
+            Models = ["market-based-allocation"]
+        });
+
+        var sweepResponse = await client.PostAsJsonAsync("/api/runs/sweep", new ParameterSweepRequest
+        {
+            Scenario = "village-food-crisis",
+            Seed = 333,
+            Ticks = 3,
+            Models = ["need-based-allocation"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0]
+            }
+        });
+        var stressResponse = await client.PostAsJsonAsync("/api/runs/stress", new StressSweepRequest
+        {
+            Scenarios = ["village-food-crisis"],
+            Seeds = [333],
+            Ticks = 3,
+            Models = ["need-based-allocation"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0]
+            }
+        });
+        var comparisonResponse = await client.GetAsync($"/api/runs/{baseline.Id}/compare/{comparison.Id}");
+
+        sweepResponse.EnsureSuccessStatusCode();
+        stressResponse.EnsureSuccessStatusCode();
+        comparisonResponse.EnsureSuccessStatusCode();
+
+        var sweep = await sweepResponse.Content.ReadFromJsonAsync<ParameterSweepResponse>();
+        var stress = await stressResponse.Content.ReadFromJsonAsync<StressSweepResponse>();
+        var runComparison = await comparisonResponse.Content.ReadFromJsonAsync<RunComparisonResponse>();
+
+        Assert.NotNull(sweep);
+        Assert.NotNull(stress);
+        Assert.NotNull(runComparison);
+        AssertAiNotUsed(baseline.AiAnalysis);
+        AssertAiNotUsed(comparison.AiAnalysis);
+        AssertAiNotUsed(sweep.AiAnalysis);
+        AssertAiNotUsed(stress.AiAnalysis);
+        AssertAiNotUsed(runComparison.AiAnalysis);
+        AssertAiNotUsed(runComparison.Baseline.AiAnalysis);
+        AssertAiNotUsed(runComparison.Comparison.AiAnalysis);
+    }
+
     [Theory]
     [InlineData("/api/runs/{0}")]
     [InlineData("/api/runs/{0}/metrics")]
@@ -773,5 +836,14 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.NotNull(run);
 
         return run;
+    }
+
+    private static void AssertAiNotUsed(PolityKit.Sim.Analysis.AiAnalysisUsage usage)
+    {
+        Assert.False(usage.Used);
+        Assert.Empty(usage.InputRunIds);
+        Assert.Empty(usage.InputFiles);
+        Assert.Null(usage.ProviderName);
+        Assert.Null(usage.ProviderModel);
     }
 }

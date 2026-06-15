@@ -1,3 +1,5 @@
+using PolityKit.Sim.Analysis;
+
 namespace PolityKit.Sim.Api.Contracts;
 
 public sealed class RunComparisonResponse
@@ -7,6 +9,8 @@ public sealed class RunComparisonResponse
     public RunSummaryResponse Comparison { get; init; } = new();
 
     public IReadOnlyList<MetricComparisonResponse> MetricDeltas { get; init; } = [];
+
+    public AiAnalysisUsage AiAnalysis { get; init; } = AiAnalysisUsage.NotUsed();
 }
 
 public sealed class MetricComparisonResponse
