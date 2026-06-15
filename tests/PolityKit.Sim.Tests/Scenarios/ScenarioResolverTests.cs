@@ -53,6 +53,29 @@ public sealed class ScenarioResolverTests
     }
 
     [Fact]
+    public void ResolveDoesNotLoadScenarioByPathWhenFilePathsAreDisabled()
+    {
+        var loader = new ThrowingScenarioLoader();
+        var path = Path.GetTempFileName();
+        var resolver = new ScenarioResolver(
+            new StubScenarioCatalog(null),
+            loader,
+            new ScenarioValidator(),
+            allowFilePaths: false);
+
+        try
+        {
+            var exception = Assert.Throws<InvalidOperationException>(() => resolver.Resolve(path));
+
+            Assert.Contains($"Scenario '{path}' was not found.", exception.Message);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void ResolveThrowsWhenScenarioCannotBeFound()
     {
         var resolver = new ScenarioResolver(new StubScenarioCatalog(null), new ThrowingScenarioLoader(), new ScenarioValidator());

@@ -31,7 +31,7 @@ public static class SweepAnalysis
             normalized[name] = values.ToArray();
         }
 
-        var runCount = GetRunCount(normalized);
+        var runCount = GetRunCount(normalized, maxRuns);
         if (runCount > maxRuns)
         {
             throw new InvalidOperationException($"Sweep would create {runCount} runs; the maximum is {maxRuns}.");
@@ -126,9 +126,24 @@ public static class SweepAnalysis
             .ToArray();
     }
 
-    private static int GetRunCount(IReadOnlyDictionary<string, IReadOnlyList<double>> sweep)
+    private static long GetRunCount(IReadOnlyDictionary<string, IReadOnlyList<double>> sweep, int maxRuns)
     {
-        return sweep.Values.Aggregate(1, (count, values) => count * values.Count);
+        long count = 1;
+        foreach (var values in sweep.Values)
+        {
+            if (values.Count > 0 && count > long.MaxValue / values.Count)
+            {
+                return maxRuns + 1L;
+            }
+
+            count *= values.Count;
+            if (count > maxRuns)
+            {
+                return count;
+            }
+        }
+
+        return count;
     }
 
     private static bool HigherIsBetter(string metricName)

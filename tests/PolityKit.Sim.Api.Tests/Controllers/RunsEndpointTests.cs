@@ -92,6 +92,52 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateRunWithScenarioPathReturnsBadRequestProblemDetails()
+    {
+        var path = Path.GetTempFileName();
+        var client = factory.CreateClient();
+
+        try
+        {
+            var response = await client.PostAsJsonAsync("/api/runs", new CreateRunRequest
+            {
+                Scenario = path
+            });
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+            Assert.NotNull(problem);
+            Assert.Equal("Run request is invalid.", problem.Title);
+            Assert.Equal(400, problem.Status);
+            Assert.Contains("was not found.", problem.Detail);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task CreateRunWithInvalidTicksReturnsBadRequestProblemDetails()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/runs", new CreateRunRequest
+        {
+            Ticks = 0
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Run request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Scenario ticks must be greater than zero.", problem.Detail);
+    }
+
+    [Fact]
     public async Task CreateSweepReturnsRunSummaryForEachParameterCombination()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -160,6 +206,30 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal("Sweep request is invalid.", problem.Title);
         Assert.Equal(400, problem.Status);
         Assert.Contains("At least one sweep parameter is required.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task CreateSweepWithInvalidTicksReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/runs/sweep", new ParameterSweepRequest
+        {
+            Ticks = -1,
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needPriorityWeight"] = [1.0]
+            }
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Sweep request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Scenario ticks must be greater than zero.", problem.Detail);
     }
 
     [Fact]
@@ -247,6 +317,29 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Equal("Stress sweep request is invalid.", problem.Title);
         Assert.Equal(400, problem.Status);
         Assert.Contains("Stress sweep would create 8 runs; the maximum is 7.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task CreateStressWithInvalidTicksReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress", new StressSweepRequest
+        {
+            Scenarios = ["village-food-crisis"],
+            Seeds = [1],
+            Ticks = 0,
+            Models = ["need-based-allocation"]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Stress sweep request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Scenario ticks must be greater than zero.", problem.Detail);
     }
 
     [Fact]
@@ -377,6 +470,27 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         var model = Assert.Single(rerun.Models);
         Assert.Equal("MarketBasedAllocation", model.ModelName);
         Assert.All(model.FinalMetrics, metric => Assert.Equal(2, metric.Tick));
+    }
+
+    [Fact]
+    public async Task RerunWithInvalidTicksReturnsBadRequestProblemDetails()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var created = await CreateRunAsync(client, new CreateRunRequest());
+
+        var response = await client.PostAsJsonAsync($"/api/runs/{created.Id}/rerun", new RerunRequest
+        {
+            Ticks = 0
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("Run request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("Scenario ticks must be greater than zero.", problem.Detail);
     }
 
     [Fact]

@@ -23,11 +23,17 @@ public static class ScenarioDefinitionExtensions
     {
         ArgumentNullException.ThrowIfNull(scenario);
 
+        var resolvedTicks = ticks ?? scenario.Ticks;
+        if (resolvedTicks <= 0)
+        {
+            throw new InvalidOperationException("Scenario ticks must be greater than zero.");
+        }
+
         return new ScenarioDefinition
         {
             Name = scenario.Name,
             Seed = seed ?? scenario.Seed,
-            Ticks = ticks ?? scenario.Ticks,
+            Ticks = resolvedTicks,
             InitialPopulation = scenario.InitialPopulation,
             InitialResources = Clone(scenario.InitialResources),
             Shocks = scenario.Shocks.Select(Clone).ToList()

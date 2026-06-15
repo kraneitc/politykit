@@ -13,14 +13,14 @@ public static class StressSweepAnalysis
         var seeds = NormalizeSeeds(request.Seeds);
         var models = NormalizeNames(request.Models, "At least one model is required.", "Model names cannot be blank.");
         var parameterCombinations = BuildParameterCombinations(request.Parameters, request.Sweep, maxRuns);
-        var totalRuns = checked(scenarios.Count * seeds.Count * models.Count * parameterCombinations.Count);
+        var totalRuns = GetRunCount(maxRuns, scenarios.Count, seeds.Count, models.Count, parameterCombinations.Count);
 
         if (totalRuns > maxRuns)
         {
             throw new InvalidOperationException($"Stress sweep would create {totalRuns} runs; the maximum is {maxRuns}.");
         }
 
-        var runs = new List<StressSweepRunPlan>(totalRuns);
+        var runs = new List<StressSweepRunPlan>((int)totalRuns);
         var runIndex = 1;
         foreach (var scenario in scenarios)
         {
@@ -97,6 +97,26 @@ public static class StressSweepAnalysis
         return sweep is null || sweep.Count == 0
             ? [new Dictionary<string, double>(baseParameters, StringComparer.OrdinalIgnoreCase)]
             : SweepAnalysis.BuildParameterCombinations(baseParameters, sweep, maxRuns);
+    }
+
+    private static long GetRunCount(int maxRuns, params int[] dimensions)
+    {
+        long count = 1;
+        foreach (var dimension in dimensions)
+        {
+            if (dimension > 0 && count > long.MaxValue / dimension)
+            {
+                return maxRuns + 1L;
+            }
+
+            count *= dimension;
+            if (count > maxRuns)
+            {
+                return count;
+            }
+        }
+
+        return count;
     }
 }
 

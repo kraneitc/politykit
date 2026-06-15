@@ -5,7 +5,8 @@ namespace PolityKit.Sim.Scenarios;
 public sealed class ScenarioResolver(
     IScenarioCatalog? catalog = null,
     IScenarioLoader? loader = null,
-    IScenarioValidator? validator = null)
+    IScenarioValidator? validator = null,
+    bool allowFilePaths = true)
 {
     private readonly IScenarioCatalog _catalog = catalog ?? new BuiltInScenarioCatalog();
     private readonly IScenarioLoader _loader = loader ?? new JsonScenarioLoader(validator);
@@ -33,7 +34,7 @@ public sealed class ScenarioResolver(
 
     private ScenarioDefinition? LoadByPath(string nameOrPath)
     {
-        return File.Exists(nameOrPath)
+        return allowFilePaths && File.Exists(nameOrPath)
             ? _loader.Load(nameOrPath)
             : null;
     }

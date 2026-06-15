@@ -50,6 +50,18 @@ public sealed class ScenarioDefinitionExtensionsTests
         Assert.NotSame(original, reticked);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void WithTicksRejectsNonPositiveTicks(int ticks)
+    {
+        var original = CreateScenario();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => original.WithTicks(ticks));
+
+        Assert.Equal("Scenario ticks must be greater than zero.", exception.Message);
+    }
+
     [Fact]
     public void CloneRejectsNullScenario()
     {

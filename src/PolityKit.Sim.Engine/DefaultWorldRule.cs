@@ -28,15 +28,21 @@ public sealed class DefaultWorldRule : IWorldRule
             }
 
             var citizen = world.Population.Citizens.FirstOrDefault(candidate => candidate.Id == allocation.CitizenId.Value);
-            if (citizen is null || !world.Resources.TryConsume(allocation.Resource, allocation.Amount))
+            if (citizen is null)
             {
                 continue;
             }
 
-            var resourceBefore = world.Resources.Get(allocation.Resource) + allocation.Amount;
+            var amount = Math.Min(allocation.Amount, NeedForResource(citizen, allocation.Resource));
+            if (amount <= 0 || !world.Resources.TryConsume(allocation.Resource, amount))
+            {
+                continue;
+            }
+
+            var resourceBefore = world.Resources.Get(allocation.Resource) + amount;
             var needBefore = NeedForResource(citizen, allocation.Resource);
             var totalNeedBefore = TotalNeed(citizen);
-            ReduceNeed(citizen, allocation.Resource, allocation.Amount);
+            ReduceNeed(citizen, allocation.Resource, amount);
             var needAfter = NeedForResource(citizen, allocation.Resource);
             var totalNeedAfter = TotalNeed(citizen);
 
@@ -44,13 +50,13 @@ public sealed class DefaultWorldRule : IWorldRule
             {
                 Tick = world.Tick,
                 Type = "ResourceAllocated",
-                Description = $"Allocated {allocation.Amount} {allocation.Resource} to citizen {citizen.Id}.",
+                Description = $"Allocated {amount} {allocation.Resource} to citizen {citizen.Id}.",
                 Data =
                 {
                     ["citizenId"] = citizen.Id,
                     ["affectedResource"] = allocation.Resource.ToString(),
                     ["resource"] = allocation.Resource.ToString(),
-                    ["amount"] = allocation.Amount,
+                    ["amount"] = amount,
                     ["priority"] = allocation.Priority,
                     ["resourceBefore"] = resourceBefore,
                     ["resourceAfter"] = world.Resources.Get(allocation.Resource),

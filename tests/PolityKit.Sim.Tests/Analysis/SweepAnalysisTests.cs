@@ -45,6 +45,23 @@ public sealed class SweepAnalysisTests
     }
 
     [Fact]
+    public void NormalizeSweepRejectsOverflowSizedRunCounts()
+    {
+        var values = Enumerable.Range(0, 50_000).Select(value => (double)value).ToArray();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            SweepAnalysis.NormalizeSweep(
+                new Dictionary<string, IReadOnlyList<double>>
+                {
+                    ["a"] = values,
+                    ["b"] = values
+                },
+                int.MaxValue));
+
+        Assert.Equal("Sweep would create 2500000000 runs; the maximum is 2147483647.", exception.Message);
+    }
+
+    [Fact]
     public void SelectFinalMetricsReturnsLatestTickPerModelMetric()
     {
         var result = new SimulationRunResult

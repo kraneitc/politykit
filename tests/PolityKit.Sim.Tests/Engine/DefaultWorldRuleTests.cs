@@ -107,6 +107,43 @@ public sealed class DefaultWorldRuleTests
     }
 
     [Fact]
+    public void ApplyClampsAllocationAmountToRemainingNeed()
+    {
+        var citizen = new Citizen { FoodNeed = 2, HealthNeed = 0, HousingNeed = 0 };
+        var world = new WorldState
+        {
+            Resources = { Food = 10 },
+            Population = { Citizens = { citizen } }
+        };
+        var decision = new SystemDecision
+        {
+            Allocations =
+            {
+                new ResourceAllocation
+                {
+                    CitizenId = citizen.Id,
+                    Resource = ResourceKind.Food,
+                    Amount = 5,
+                    Priority = 10
+                }
+            }
+        };
+        var rule = new DefaultWorldRule();
+
+        rule.Apply(world, decision);
+
+        Assert.Equal(0, citizen.FoodNeed);
+        Assert.Equal(8, world.Resources.Food);
+        var allocationEvent = world.Events.Single(simulationEvent => simulationEvent.Type == "ResourceAllocated");
+        Assert.Equal(2, allocationEvent.Data["amount"]);
+        Assert.Equal(10, allocationEvent.Data["resourceBefore"]);
+        Assert.Equal(8, allocationEvent.Data["resourceAfter"]);
+        Assert.Equal(-2, allocationEvent.Data["resourceDelta"]);
+        Assert.Equal(2, allocationEvent.Data["needBefore"]);
+        Assert.Equal(0, allocationEvent.Data["needAfter"]);
+    }
+
+    [Fact]
     public void ApplyRecordsPolicyChangesAndInstitutionalActions()
     {
         var world = new WorldState

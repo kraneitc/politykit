@@ -28,7 +28,11 @@ public class Program
         builder.Services.AddSingleton<IScenarioCatalog, BuiltInScenarioCatalog>();
         builder.Services.AddSingleton<IScenarioValidator, ScenarioValidator>();
         builder.Services.AddSingleton<IScenarioLoader, JsonScenarioLoader>();
-        builder.Services.AddSingleton<ScenarioResolver>();
+        builder.Services.AddSingleton(sp => new ScenarioResolver(
+            sp.GetRequiredService<IScenarioCatalog>(),
+            sp.GetRequiredService<IScenarioLoader>(),
+            sp.GetRequiredService<IScenarioValidator>(),
+            allowFilePaths: false));
         builder.Services.AddSingleton<IRunStore, FileRunStore>();
         builder.Services.AddSingleton<SimulationRunService>();
 

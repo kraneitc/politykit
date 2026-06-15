@@ -76,4 +76,26 @@ public sealed class StressSweepAnalysisTests
 
         Assert.Equal("Stress sweep would create 16 runs; the maximum is 15.", exception.Message);
     }
+
+    [Fact]
+    public void BuildPlanRejectsOverflowSizedSweepBeforeMaterializingRuns()
+    {
+        var values = Enumerable.Range(0, 50_000).Select(value => (double)value).ToArray();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            StressSweepAnalysis.BuildPlan(new StressSweepRequest
+            {
+                Scenarios = ["village-food-crisis"],
+                Seeds = [1],
+                Models = ["need-based-allocation"],
+                Sweep = new Dictionary<string, IReadOnlyList<double>>
+                {
+                    ["a"] = values,
+                    ["b"] = values
+                },
+                MaxRuns = int.MaxValue
+            }));
+
+        Assert.Equal("Sweep would create 2500000000 runs; the maximum is 2147483647.", exception.Message);
+    }
 }
