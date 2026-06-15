@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Microsoft.OpenApi;
 using PolityKit.Sim.Api.Services;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
@@ -19,7 +20,10 @@ public class Program
         builder.Services.AddControllers()
             .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddProblemDetails();
-        builder.Services.AddOpenApi();
+        builder.Services.AddOpenApi(options =>
+        {
+            options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0;
+        });
         builder.Services.Configure<RunStorageOptions>(builder.Configuration.GetSection("RunStorage"));
 
         builder.Services.AddSingleton<ISimulationEngine, SimulationEngine>();
@@ -42,6 +46,10 @@ public class Program
         if (app.Environment.IsDevelopment())
         {
             app.MapOpenApi();
+            app.UseSwaggerUI(options =>
+            {
+                options.SwaggerEndpoint("/openapi/v1.json", "PolityKit Sim API v1");
+            });
         }
 
         app.UseHttpsRedirection();
