@@ -72,6 +72,18 @@ public sealed record AiAnalysisArtifact(
 
         return new AiAnalysisArtifact(kind, result, provenance, provenance.ToUsage(result.Status != AiAnalysisStatus.Disabled));
     }
+
+    public static AiAnalysisArtifact Create(
+        AiAnalysisKind kind,
+        AiAnalysisResult result,
+        AiAnalysisProvenance provenance,
+        bool used)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+        ArgumentNullException.ThrowIfNull(provenance);
+
+        return new AiAnalysisArtifact(kind, result, provenance, provenance.ToUsage(used));
+    }
 }
 
 public sealed record AiAnalysisProvenance(

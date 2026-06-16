@@ -74,3 +74,11 @@ Before sending run data to an external provider:
 - Record the provider name, provider model, prompt template version, input run IDs or files, and creation time.
 
 The default local behavior is no AI analysis. CLI run, sweep, and stress workflows write an `ai-analysis.json` sidecar with `used: false`, and API workflow responses include `aiAnalysis.used: false` unless a future explicit AI feature creates an advisory artifact.
+
+## Provider Configuration
+
+Provider integrations are optional. The shared analysis layer exposes `IAiAnalysisProvider`, `AiAnalysisOptions`, `AiAnalysisService`, and a `DisabledAiAnalysisProvider` so callers can request AI analysis without requiring a cloud provider package.
+
+Default options keep AI disabled. Disabled mode returns an advisory artifact with status `Disabled`, the message `AI analysis is not configured.`, and `aiAnalysis.used: false`.
+
+When AI is enabled, callers select a provider implementation outside the deterministic simulation path. The shared service applies a timeout, bounds prompt input size, bounds generated text size, preserves external cancellation, and turns provider failures or service timeouts into deterministic failed artifacts. This layer does not log prompt contents.

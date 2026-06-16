@@ -1,0 +1,173 @@
+namespace PolityKit.Sim.Analysis;
+
+public interface IAiAnalysisProvider
+{
+    string ProviderName { get; }
+
+    string ProviderModel { get; }
+
+    Task<AiAnalysisResult> AnalyzeAsync(
+        AiAnalysisRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class DisabledAiAnalysisProvider : IAiAnalysisProvider
+{
+    public const string Name = "disabled";
+
+    public string ProviderName => Name;
+
+    public string ProviderModel => Name;
+
+    public Task<AiAnalysisResult> AnalyzeAsync(
+        AiAnalysisRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return Task.FromResult(AiAnalysisResult.Disabled("AI analysis is not configured."));
+    }
+}
+
+public sealed class AiAnalysisOptions
+{
+    public bool Enabled { get; init; }
+
+    public string ProviderName { get; init; } = DisabledAiAnalysisProvider.Name;
+
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(30);
+
+    public int MaxInputCharacters { get; init; } = 100_000;
+
+    public int MaxOutputCharacters { get; init; } = 20_000;
+}
+
+public sealed class AiAnalysisService
+{
+    private static readonly AiAnalysisOptions DefaultOptions = new();
+
+    private readonly IAiAnalysisProvider _provider;
+    private readonly AiAnalysisOptions _options;
+
+    public AiAnalysisService(IAiAnalysisProvider? provider = null, AiAnalysisOptions? options = null)
+    {
+        _provider = provider ?? new DisabledAiAnalysisProvider();
+        _options = options ?? DefaultOptions;
+    }
+
+    public async Task<AiAnalysisArtifact> AnalyzeAsync(
+        AiAnalysisRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ValidateOptions(_options);
+
+        if (!_options.Enabled)
+        {
+            var result = await new DisabledAiAnalysisProvider()
+                .AnalyzeAsync(request, cancellationToken)
+                .ConfigureAwait(false);
+            return AiAnalysisArtifact.Create(request.Kind, result, request.Provenance, used: false);
+        }
+
+        if (request.Context.Length > _options.MaxInputCharacters)
+        {
+            return AiAnalysisArtifact.Create(
+                request.Kind,
+                AiAnalysisResult.Failed($"AI analysis input exceeds the configured maximum of {_options.MaxInputCharacters} characters."),
+                request.Provenance,
+                used: false);
+        }
+
+        using var timeout = CreateTimeout(cancellationToken, _options.Timeout);
+
+        try
+        {
+            var result = await _provider
+                .AnalyzeAsync(request, timeout.Token)
+                .ConfigureAwait(false);
+            result = BoundOutput(result, _options.MaxOutputCharacters);
+            return AiAnalysisArtifact.Create(
+                request.Kind,
+                result,
+                StampProvider(request.Provenance, _provider.ProviderName, _provider.ProviderModel),
+                used: true);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return AiAnalysisArtifact.Create(
+                request.Kind,
+                AiAnalysisResult.Failed($"AI analysis provider timed out after {_options.Timeout.TotalSeconds:0.###} seconds."),
+                StampProvider(request.Provenance, _provider.ProviderName, _provider.ProviderModel),
+                used: true);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return AiAnalysisArtifact.Create(
+                request.Kind,
+                AiAnalysisResult.Failed($"AI analysis provider failed with {ex.GetType().Name}."),
+                StampProvider(request.Provenance, _provider.ProviderName, _provider.ProviderModel),
+                used: true);
+        }
+    }
+
+    private static CancellationTokenSource CreateTimeout(CancellationToken cancellationToken, TimeSpan timeout)
+    {
+        var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        source.CancelAfter(timeout);
+        return source;
+    }
+
+    private static AiAnalysisResult BoundOutput(AiAnalysisResult result, int maxOutputCharacters)
+    {
+        if (result.GeneratedText.Length <= maxOutputCharacters)
+        {
+            return result;
+        }
+
+        var warnings = result.Warnings
+            .Concat([$"AI analysis output exceeded the configured maximum of {maxOutputCharacters} characters and was truncated."])
+            .ToArray();
+        return result with
+        {
+            GeneratedText = result.GeneratedText[..maxOutputCharacters],
+            Warnings = warnings
+        };
+    }
+
+    private static AiAnalysisProvenance StampProvider(
+        AiAnalysisProvenance provenance,
+        string providerName,
+        string providerModel)
+    {
+        return provenance with
+        {
+            ProviderName = providerName,
+            ProviderModel = providerModel,
+            CreatedAt = provenance.CreatedAt ?? DateTimeOffset.UtcNow
+        };
+    }
+
+    private static void ValidateOptions(AiAnalysisOptions options)
+    {
+        if (options.MaxInputCharacters < 1)
+        {
+            throw new InvalidOperationException("AI analysis maximum input characters must be greater than zero.");
+        }
+
+        if (options.MaxOutputCharacters < 1)
+        {
+            throw new InvalidOperationException("AI analysis maximum output characters must be greater than zero.");
+        }
+
+        if (options.Timeout <= TimeSpan.Zero)
+        {
+            throw new InvalidOperationException("AI analysis timeout must be greater than zero.");
+        }
+    }
+}

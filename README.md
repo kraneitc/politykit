@@ -507,7 +507,9 @@ The API stores run records as JSON files under `data/runs` by default. Configure
 
 API run, sweep, stress, and comparison responses include `aiAnalysis`. By default this records `used: false`; AI-generated text, if added later, must stay advisory and record provenance such as source run IDs, files, scenarios, models, seeds, metrics, provider, model, prompt template version, and creation time rather than becoming authoritative simulation data.
 
-See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, and privacy note for data sent to external providers.
+The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
+
+See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
 ## API Surface
 
