@@ -250,6 +250,35 @@ public sealed class SimulationRunService(
         return BuildScenarioSuggestionArtifact(analysis);
     }
 
+    public async Task<AiModelCritiqueArtifact?> CreateModelCritiqueAsync(
+        Guid id,
+        IReadOnlyList<string>? models = null,
+        CancellationToken cancellationToken = default)
+    {
+        var storedRun = runStore.Get(id);
+        if (storedRun is null)
+        {
+            return null;
+        }
+
+        var configuration = GetConfiguration(storedRun);
+        var requestedModels = models is { Count: > 0 }
+            ? models
+            : configuration.ModelNames;
+        var selectedModels = SelectModels(requestedModels);
+        var manifests = selectedModels
+            .OfType<AllocationModelBase>()
+            .Select(model => model.Manifest)
+            .ToArray();
+        var request = AiAnalysisContextBuilders.BuildModelCritiqueRequest(
+            manifests,
+            SimulationRunSummary.Create(storedRun.Result),
+            FailureAnalysis.DetectCollapses(storedRun.Result),
+            runId: storedRun.Id);
+        var analysis = await aiAnalysisService.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false);
+        return new AiModelCritiqueArtifact(analysis, AiModelCritiqueReader.ReadCritique(analysis.Result));
+    }
+
     private StoredRun RunAndStore(
         string scenarioName,
         int seed,

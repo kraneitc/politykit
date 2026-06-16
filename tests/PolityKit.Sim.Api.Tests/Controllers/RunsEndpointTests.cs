@@ -9,6 +9,9 @@ using AiAnalysisKind = PolityKit.Sim.Analysis.AiAnalysisKind;
 using AiAnalysisRequest = PolityKit.Sim.Analysis.AiAnalysisRequest;
 using AiAnalysisResult = PolityKit.Sim.Analysis.AiAnalysisResult;
 using AiAnalysisStatus = PolityKit.Sim.Analysis.AiAnalysisStatus;
+using AiModelCritique = PolityKit.Sim.Analysis.AiModelCritique;
+using AiModelCritiqueArtifact = PolityKit.Sim.Analysis.AiModelCritiqueArtifact;
+using AiModelCritiqueItem = PolityKit.Sim.Analysis.AiModelCritiqueItem;
 using AiScenarioSuggestionArtifact = PolityKit.Sim.Analysis.AiScenarioSuggestionArtifact;
 using AiScenarioSuggestionDraft = PolityKit.Sim.Analysis.AiScenarioSuggestionDraft;
 using IAiAnalysisProvider = PolityKit.Sim.Analysis.IAiAnalysisProvider;
@@ -873,6 +876,61 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateModelCritiqueUsesProviderAndSelectedPresetManifest()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "Review this critique as advisory model feedback, not proof that the model is correct or incorrect.",
+            [],
+            ["fake warning"],
+            ["PolityKit.Sim.Cli critique-model --bundle runs/example --model regulated-market"],
+            new AiModelCritique(
+                [
+                    new AiModelCritiqueItem(
+                        "Market access risk",
+                        "The regulated-market preset still relies on wealth-shaped access during scarcity.",
+                        ["Allocation mechanism: Market Price Weighted"])
+                ],
+                [
+                    new AiModelCritiqueItem(
+                        "Administrative load pressure",
+                        "Oversight and appeal dimensions may raise administrative load.",
+                        ["Administrative Load final metric"])
+                ],
+                ["Run a stress sweep with needWeightMultiplier values around the default."],
+                ["Document which preset assumptions were not directly tested by this run."])));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["regulated-market"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/model-critique?model=regulated-market", null);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiModelCritiqueArtifact>();
+        Assert.NotNull(artifact);
+        Assert.Equal(AiAnalysisKind.ModelCritique, artifact.Analysis.Kind);
+        Assert.Equal(AiAnalysisStatus.Succeeded, artifact.Analysis.Result.Status);
+        Assert.True(artifact.Analysis.AiAnalysis.Used);
+        Assert.Equal([run.Id], artifact.Analysis.AiAnalysis.InputRunIds);
+        Assert.Equal(["CompositeGovernance:regulated-market"], artifact.Analysis.AiAnalysis.ModelNames);
+        Assert.NotNull(artifact.Critique);
+        Assert.NotEmpty(artifact.Critique.AssumptionRisks);
+        Assert.NotEmpty(artifact.Critique.ObservedFailureModes);
+        Assert.NotEmpty(artifact.Critique.SuggestedTests);
+        Assert.NotEmpty(artifact.Critique.SuggestedDocumentationUpdates);
+        Assert.NotNull(provider.LastRequest);
+        Assert.Equal(AiAnalysisKind.ModelCritique, provider.LastRequest.Kind);
+        Assert.Contains("\"sourceType\": \"model-critique\"", provider.LastRequest.Context);
+        Assert.Contains("\"governanceDimensions\"", provider.LastRequest.Context);
+        Assert.Contains("not proof that a model is correct or incorrect", provider.LastRequest.Context);
+    }
+
+    [Fact]
     public async Task RunSweepStressAndComparisonWorkWithoutAiConfiguration()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -942,6 +1000,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     [InlineData("/api/runs/{0}/dashboard")]
     [InlineData("/api/runs/{0}/ai-summary")]
     [InlineData("/api/runs/{0}/scenario-suggestions")]
+    [InlineData("/api/runs/{0}/ai/model-critique")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -950,6 +1009,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
 
         var response = route.EndsWith("/ai-summary", StringComparison.Ordinal)
             || route.EndsWith("/scenario-suggestions", StringComparison.Ordinal)
+            || route.EndsWith("/model-critique", StringComparison.Ordinal)
             ? await client.PostAsync(route, null)
             : await client.GetAsync(route);
 

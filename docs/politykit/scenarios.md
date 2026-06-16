@@ -2,7 +2,7 @@
 
 PolityKit scenarios are JSON files that define the starting world and scheduled shocks for a simulation run.
 
-The formal schema is [scenario.schema.json](scenario.schema.json). The examples in [../examples](../examples) use the same format.
+The formal schema is [scenario.schema.json](scenario.schema.json). The examples in [../../examples](../../examples) use the same format.
 
 ## Basic Shape
 
@@ -92,7 +92,7 @@ The JSON loader is case-insensitive, but new scenarios should use the camelCase 
 
 ## Authoring A New Scenario
 
-1. Copy one of the files in [../examples](../examples).
+1. Copy one of the files in [../../examples](../../examples).
 2. Give the scenario a clear `name` and choose a deterministic `seed`.
 3. Set `ticks` long enough for both the shock and recovery pattern you want to observe.
 4. Choose `initialPopulation` and `initialResources` so scarcity is visible but not accidental.

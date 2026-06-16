@@ -48,14 +48,21 @@ PolityKit/
   README.md
   LICENSE
   docs/
-    add-metric.md
-    add-model.md
-    add-scenario.md
-    contributing.md
-    governance-presets.md
-    ROADMAP.md
-    scenarios.md
-    scenario.schema.json
+    politykit/
+      add-metric.md
+      add-model.md
+      add-scenario.md
+      contributing.md
+      governance-presets.md
+      scenarios.md
+      scenario.schema.json
+      implementation/
+        politykit-roadmap.md
+        v0.6-implementation-plan.md
+        v0.7-implementation-plan.md
+        v0.8-implementation-plan.md
+    charterfall/
+      implementation/
   examples/
     README.md
     corruption-stress.json
@@ -271,6 +278,7 @@ After a run, inspect:
 - `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
 - `ai-analysis.json` for whether advisory AI analysis was used. Default simulation runs record `used: false`.
 - `ai-summary.json` after running the optional `summary` command for an advisory generated interpretation of the run.
+- `ai-model-critique.json` after running the optional `critique-model` command for advisory model critique fields.
 - `metrics.csv` for metric values by tick.
 - `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
 - `citizens-final.csv` for final citizen state.
@@ -295,6 +303,17 @@ dotnet run --project src/PolityKit.Sim.Cli -- suggest-scenario \
 ```
 
 This writes `scenario-suggestion-draft.json` only when the provider returned a draft and the existing scenario validator accepts it. The draft remains a proposed artifact for review, not an automatically accepted scenario file.
+
+Generate an advisory model critique from the same completed bundle:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- critique-model \
+  --bundle runs/village-food-crisis-12345 \
+  --model regulated-market \
+  --provider fake
+```
+
+This writes `ai-model-critique.json` with model manifest assumptions, governance dimensions, run metrics, failure diagnostics, and provenance. Critiques are prompts for human review; they are not proof that a model is correct or incorrect, and they do not rewrite model code.
 
 After a sweep, inspect:
 
@@ -530,9 +549,9 @@ API run, sweep, stress, and comparison responses include `aiAnalysis`. By defaul
 
 The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
 
-For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run or `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft.
+For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft, or `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique.
 
-See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
+See [AI boundaries and safety](docs/politykit/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
 ## API Surface
 
@@ -550,6 +569,7 @@ GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
 POST /api/runs/{id}/ai-summary
 POST /api/runs/{id}/scenario-suggestions
+POST /api/runs/{id}/ai/model-critique
 POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}
 POST /api/runs/sweep
@@ -587,7 +607,7 @@ Example JSON scenarios live in `examples/`:
 - `interpretability-demo.json`
 - `corruption-stress.json`
 
-The scenario guide lives at `docs/scenarios.md`, and the formal schema lives at `docs/scenario.schema.json`.
+The scenario guide lives at `docs/politykit/scenarios.md`, and the formal schema lives at `docs/politykit/scenario.schema.json`.
 The golden interpreted run bundle lives at `examples/golden-interpreted-run`.
 
 Each scenario includes:
@@ -640,7 +660,7 @@ Each model exposes a manifest with assumptions and known failure modes.
 
 Composite governance presets appear as `CompositeGovernance:<preset-id>` models. They are simplified bundles of governance dimensions, not claims about real societies. Their manifests include both preset-level assumptions and per-dimension assumptions such as allocation mechanism, decision authority, accountability, information flow, property regime, and appeal process.
 
-See [Governance presets](docs/governance-presets.md) for the current preset list, manifest interpretation rules, and wording boundaries for comparing presets against baseline models.
+See [Governance presets](docs/politykit/governance-presets.md) for the current preset list, manifest interpretation rules, and wording boundaries for comparing presets against baseline models.
 
 ### Governance Presets
 
@@ -762,16 +782,16 @@ The project should welcome disagreement by turning it into inspectable model-bui
 
 Contributor docs:
 
-- [Contributing guide](docs/contributing.md)
-- [How to add a model](docs/add-model.md)
-- [Governance presets](docs/governance-presets.md)
-- [How to add a metric](docs/add-metric.md)
-- [How to add a scenario](docs/add-scenario.md)
-- [Scenario format reference](docs/scenarios.md)
+- [Contributing guide](docs/politykit/contributing.md)
+- [How to add a model](docs/politykit/add-model.md)
+- [Governance presets](docs/politykit/governance-presets.md)
+- [How to add a metric](docs/politykit/add-metric.md)
+- [How to add a scenario](docs/politykit/add-scenario.md)
+- [Scenario format reference](docs/politykit/scenarios.md)
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md).
+See [docs/politykit/implementation/politykit-roadmap.md](docs/politykit/implementation/politykit-roadmap.md).
 
 ## License
 

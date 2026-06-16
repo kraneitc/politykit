@@ -144,6 +144,34 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
             : Ok(artifact);
     }
 
+    [HttpPost("{id:guid}/model-critique")]
+    [HttpPost("{id:guid}/ai/model-critique")]
+    public async Task<IActionResult> CreateModelCritique(
+        Guid id,
+        [FromQuery] string? model,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var models = string.IsNullOrWhiteSpace(model)
+                ? null
+                : model.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var artifact = await simulationRunService.CreateModelCritiqueAsync(id, models, cancellationToken);
+            return artifact is null
+                ? NotFound()
+                : Ok(artifact);
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Model critique request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
     [HttpGet("{id:guid}/compare/{comparisonId:guid}")]
     public IActionResult CompareRuns(Guid id, Guid comparisonId)
     {

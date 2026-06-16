@@ -38,6 +38,7 @@ internal static class Program
                 "stress" => Stress(args[1..]),
                 "summary" => Summary(args[1..]),
                 "suggest-scenario" => SuggestScenario(args[1..]),
+                "critique-model" => CritiqueModel(args[1..]),
                 "list-models" => ListModels(),
                 _ => Fail($"Unknown command '{args[0]}'.")
             };
@@ -201,6 +202,67 @@ internal static class Program
         WriteJson(outputPath, artifact);
         Console.WriteLine($"Wrote scenario suggestion draft artifact to {Path.GetFullPath(outputPath)}");
         Console.WriteLine("Draft status: valid");
+        return 0;
+    }
+
+    private static int CritiqueModel(string[] args)
+    {
+        var bundleDirectory = ReadSummaryBundleDirectory(args);
+        var modelName = ReadOption(args, "--model");
+        if (string.IsNullOrWhiteSpace(modelName))
+        {
+            throw new InvalidOperationException("The critique-model command requires --model <name>.");
+        }
+
+        var providerName = ReadOption(args, "--provider") ?? DisabledAiAnalysisProvider.Name;
+        var outputPath = ReadOption(args, "--out") ?? Path.Combine(bundleDirectory, "ai-model-critique.json");
+        var summaryPath = Path.Combine(bundleDirectory, "summary.json");
+        var configPath = Path.Combine(bundleDirectory, "config.json");
+
+        if (!File.Exists(summaryPath))
+        {
+            throw new InvalidOperationException($"Run bundle summary file was not found at '{summaryPath}'.");
+        }
+
+        var summary = JsonSerializer.Deserialize<SimulationRunSummary>(File.ReadAllText(summaryPath), JsonOptions)
+            ?? throw new InvalidOperationException($"Run bundle summary file '{summaryPath}' could not be read.");
+        var config = File.Exists(configPath)
+            ? JsonSerializer.Deserialize<RunBundleConfig>(File.ReadAllText(configPath), JsonOptions) ?? new RunBundleConfig()
+            : new RunBundleConfig();
+        var modelCatalog = new ModelCatalog();
+        var models = SelectModels(modelCatalog, modelName);
+        var manifests = models
+            .OfType<AllocationModelBase>()
+            .Select(model => model.Manifest)
+            .ToArray();
+        var request = AiAnalysisContextBuilders.BuildModelCritiqueRequest(
+            manifests,
+            summary,
+            sourceFiles: File.Exists(configPath) ? [summaryPath, configPath] : [summaryPath]);
+        IAiAnalysisProvider provider = string.Equals(providerName, FakeAiAnalysisProvider.Name, StringComparison.OrdinalIgnoreCase)
+            ? new FakeAiAnalysisProvider()
+            : new DisabledAiAnalysisProvider();
+        var analysis = new AiAnalysisService(provider, new AiAnalysisOptions
+        {
+            Enabled = provider is FakeAiAnalysisProvider,
+            ProviderName = provider.ProviderName
+        }).AnalyzeAsync(request).GetAwaiter().GetResult();
+        var artifact = new AiModelCritiqueArtifact(analysis, AiModelCritiqueReader.ReadCritique(analysis.Result));
+
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        WriteJson(outputPath, artifact);
+        Console.WriteLine($"Wrote AI model critique artifact to {Path.GetFullPath(outputPath)}");
+        Console.WriteLine($"Status: {artifact.Analysis.Result.Status}");
+        if (config.Models.Count > 0)
+        {
+            Console.WriteLine($"Bundle models: {string.Join(", ", config.Models.Select(model => model.Name))}");
+        }
+
         return 0;
     }
 
@@ -634,7 +696,7 @@ internal static class Program
         var bundleDirectory = ReadOption(args, "--bundle");
         if (string.IsNullOrWhiteSpace(bundleDirectory))
         {
-            throw new InvalidOperationException("The summary command requires --bundle <directory>.");
+            throw new InvalidOperationException("This command requires --bundle <directory>.");
         }
 
         return Path.GetFullPath(bundleDirectory);
@@ -741,6 +803,7 @@ internal static class Program
           PolityKit.Sim.Cli stress [options]
           PolityKit.Sim.Cli summary --bundle <directory> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli suggest-scenario --bundle <directory> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli critique-model --bundle <directory> --model <name> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli list-models
 
         Run options:
@@ -764,6 +827,7 @@ internal static class Program
           PolityKit.Sim.Cli stress --scenario village-food-crisis --seed 111,222 --models need-based-allocation,market-based-allocation --sweep needPriorityWeight=0.75,1.0
           PolityKit.Sim.Cli summary --bundle runs/village-food-crisis-12345 --provider fake
           PolityKit.Sim.Cli suggest-scenario --bundle runs/village-food-crisis-12345 --provider fake
+          PolityKit.Sim.Cli critique-model --bundle runs/village-food-crisis-12345 --model need-based-allocation --provider fake
         """);
     }
 

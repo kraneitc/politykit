@@ -3,6 +3,7 @@ using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Core.Events;
 using PolityKit.Sim.Core.Metrics;
 using PolityKit.Sim.Engine;
+using PolityKit.Sim.Models;
 
 namespace PolityKit.Sim.Tests.Analysis;
 
@@ -201,6 +202,79 @@ public sealed class AiAnalysisContextBuildersTests
         Assert.NotEmpty(root.GetProperty("sensitivity").EnumerateArray());
         Assert.NotEmpty(root.GetProperty("modelRobustness").EnumerateArray());
         Assert.Contains("Full event streams are excluded", request.Context);
+    }
+
+    [Fact]
+    public void BuildModelCritiqueRequestIncludesManifestsGovernanceDimensionsAndRunDiagnostics()
+    {
+        var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var catalog = new ModelCatalog();
+        var manifests = new[]
+        {
+            ((AllocationModelBase)catalog.FindByName("need-based-allocation")!).Manifest,
+            ((AllocationModelBase)catalog.FindByName("regulated-market")!).Manifest
+        };
+        var result = RunResult(
+            models:
+            [
+                ModelResult(
+                    "CompositeGovernance:regulated-market",
+                    "0.1.0",
+                    [new MetricResult { Name = "Administrative Load", Tick = 2, Value = 12, Unit = "actions" }],
+                    []),
+                ModelResult(
+                    "NeedBasedAllocation",
+                    "0.1.0",
+                    [new MetricResult { Name = "Needs Met", Tick = 2, Value = 0.8, Unit = "ratio" }],
+                    [])
+            ]);
+        var collapse = new CollapseEvent(
+            "CompositeGovernance:regulated-market",
+            "Administrative Load",
+            "Administrative Load",
+            10,
+            FailureOperator.GreaterThan,
+            2,
+            12,
+            null,
+            null,
+            "no recovery observed",
+            []);
+
+        var request = AiAnalysisContextBuilders.BuildModelCritiqueRequest(
+            manifests,
+            SimulationRunSummary.Create(result),
+            [collapse],
+            runId: runId,
+            sourceFiles: ["runs/example/summary.json"]);
+
+        using var document = JsonDocument.Parse(request.Context);
+        var root = document.RootElement;
+
+        Assert.Equal(AiAnalysisKind.ModelCritique, request.Kind);
+        Assert.Equal(AiAnalysisContextBuilders.ModelCritiquePromptTemplateVersion, request.Provenance.PromptTemplateVersion);
+        Assert.Equal([runId], request.Provenance.SourceRunIds);
+        Assert.Equal(["runs/example/summary.json"], request.Provenance.SourceFiles);
+        Assert.Equal(["Scenario A"], request.Provenance.ScenarioNames);
+        Assert.Equal(["CompositeGovernance:regulated-market", "NeedBasedAllocation"], request.Provenance.ModelNames);
+        Assert.Equal([123], request.Provenance.Seeds);
+        Assert.Equal(["Administrative Load", "Needs Met"], request.Provenance.MetricNames);
+        Assert.Equal("model-critique", root.GetProperty("sourceType").GetString());
+        Assert.Contains("not proof that a model is correct or incorrect", request.Context);
+
+        Assert.Equal(
+            ["CompositeGovernance:regulated-market", "NeedBasedAllocation"],
+            root.GetProperty("manifests").EnumerateArray()
+                .Select(manifest => manifest.GetProperty("model").GetString()!)
+                .ToArray());
+        Assert.NotEmpty(root.GetProperty("manifests")[0].GetProperty("governanceDimensions").EnumerateArray());
+        Assert.Equal(
+            ["CompositeGovernance:regulated-market", "NeedBasedAllocation"],
+            root.GetProperty("runModels").EnumerateArray()
+                .Select(model => model.GetProperty("modelName").GetString()!)
+                .ToArray());
+        var collapseContext = Assert.Single(root.GetProperty("collapseEvents").EnumerateArray());
+        Assert.Equal("Administrative Load", collapseContext.GetProperty("metric").GetString());
     }
 
     [Fact]

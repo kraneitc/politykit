@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PolityKit.Sim.Core.Models;
 using PolityKit.Sim.Engine;
 
 namespace PolityKit.Sim.Analysis;
@@ -9,6 +10,7 @@ public static class AiAnalysisContextBuilders
     public const string RunSummaryPromptTemplateVersion = "run-summary-context-v1";
     public const string RunComparisonPromptTemplateVersion = "run-comparison-context-v1";
     public const string StressSummaryPromptTemplateVersion = "stress-summary-context-v1";
+    public const string ModelCritiquePromptTemplateVersion = "model-critique-context-v1";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -263,6 +265,126 @@ public static class AiAnalysisContextBuilders
                 null));
     }
 
+    public static AiAnalysisRequest BuildModelCritiqueRequest(
+        IReadOnlyList<ModelManifest> manifests,
+        SimulationRunSummary? runSummary = null,
+        IReadOnlyList<CollapseEvent>? collapseEvents = null,
+        StressSweepResult? stressResult = null,
+        Guid? runId = null,
+        IReadOnlyList<string>? sourceFiles = null,
+        string promptTemplateVersion = ModelCritiquePromptTemplateVersion)
+    {
+        ArgumentNullException.ThrowIfNull(manifests);
+        if (manifests.Count == 0)
+        {
+            throw new InvalidOperationException("Model critique requires at least one model manifest.");
+        }
+
+        var orderedManifests = manifests
+            .Where(manifest => !string.IsNullOrWhiteSpace(manifest.Model))
+            .OrderBy(manifest => manifest.Model, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(manifest => manifest.Version, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (orderedManifests.Length == 0)
+        {
+            throw new InvalidOperationException("Model critique requires at least one named model manifest.");
+        }
+
+        var runModels = runSummary?.Models
+            .Where(model => orderedManifests.Any(manifest =>
+                string.Equals(manifest.Model, model.ModelName, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(model => model.ModelName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(model => model.ModelVersion, StringComparer.OrdinalIgnoreCase)
+            .Select(ToModelContext)
+            .ToArray() ?? [];
+        var stressRuns = stressResult?.Runs
+            .Where(run => orderedManifests.Any(manifest =>
+                string.Equals(manifest.Model, run.Model, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(run => run.RunIndex)
+            .Select(ToStressRunContext)
+            .ToArray() ?? [];
+        var robustness = stressResult?.ModelRobustness
+            .Where(summary => orderedManifests.Any(manifest =>
+                string.Equals(manifest.Model, summary.Model, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(summary => summary.Model, StringComparer.OrdinalIgnoreCase)
+            .Select(summary => new ModelRobustnessContext(
+                summary.Model,
+                summary.ScenariosTested.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+                summary.SeedsTested.Order().ToArray(),
+                summary.RunsCompleted,
+                summary.CollapseRate,
+                summary.MedianCollapseTick,
+                summary.EarliestCollapseTick,
+                summary.RecoveryRate,
+                summary.WorstAffectedMetric,
+                summary.MostSensitiveParameter,
+                summary.BestScenarioName,
+                summary.WorstScenarioName))
+            .ToArray() ?? [];
+        var collapses = (collapseEvents ?? [])
+            .Concat(stressResult?.CollapseEvents ?? [])
+            .Where(collapse => orderedManifests.Any(manifest =>
+                string.Equals(manifest.Model, collapse.Model, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(collapse => collapse.Model, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(collapse => collapse.Metric, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(collapse => collapse.Criterion, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(collapse => collapse.CollapseTick)
+            .Select(ToCollapseContext)
+            .ToArray();
+        var scenarioNames = NormalizeStrings(
+            (runSummary is null ? Array.Empty<string>() : [runSummary.ScenarioName])
+            .Concat(stressResult?.Scenarios ?? [])
+            .ToArray());
+        var seeds = (runSummary is null ? Array.Empty<int>() : [runSummary.Seed])
+            .Concat(stressResult?.Seeds ?? [])
+            .Distinct()
+            .Order()
+            .ToArray();
+        var metricNames = runModels
+            .SelectMany(model => model.FinalMetrics.Select(metric => metric.Name))
+            .Concat(stressRuns.SelectMany(run => run.FinalMetrics.Select(metric => metric.Name)))
+            .Concat(collapses.Select(collapse => collapse.Metric))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var context = new ModelCritiqueContext(
+            "model-critique",
+            AiAnalysisUsage.AdvisoryOutputRule,
+            [
+                .. RedactionNotes,
+                "Critiques are prompts for human review, not proof that a model is correct or incorrect.",
+                "The context excludes model source code and includes manifests plus deterministic summaries only."
+            ],
+            orderedManifests.Select(ToModelManifestContext).ToArray(),
+            runSummary is null ? null : new RunReferenceContext(
+                runId,
+                null,
+                runSummary.ScenarioName,
+                runSummary.Seed,
+                runSummary.Ticks,
+                runModels.Select(model => model.ModelName).ToArray()),
+            runModels,
+            stressRuns,
+            collapses,
+            robustness);
+
+        return new AiAnalysisRequest(
+            AiAnalysisKind.ModelCritique,
+            Serialize(context),
+            new AiAnalysisProvenance(
+                runId is null ? [] : [runId.Value],
+                NormalizeStrings(sourceFiles),
+                scenarioNames,
+                orderedManifests.Select(manifest => manifest.Model).ToArray(),
+                seeds,
+                metricNames,
+                promptTemplateVersion,
+                null,
+                null,
+                null));
+    }
+
     private static IReadOnlyList<string> RedactionNotes =>
     [
         "Raw citizen state is excluded.",
@@ -440,6 +562,35 @@ public static class AiAnalysisContextBuilders
                 .ToArray());
     }
 
+    private static ModelManifestContext ToModelManifestContext(ModelManifest manifest)
+    {
+        return new ModelManifestContext(
+            manifest.Model,
+            manifest.Version,
+            manifest.Description,
+            manifest.Assumptions
+                .OrderBy(assumption => assumption.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(assumption => new ModelAssumptionContext(
+                    assumption.Name,
+                    assumption.Default,
+                    assumption.Description))
+                .ToArray(),
+            manifest.GovernanceDimensions
+                .OrderBy(dimension => dimension.DimensionId, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(dimension => dimension.ValueId, StringComparer.OrdinalIgnoreCase)
+                .Select(dimension => new GovernanceDimensionContext(
+                    dimension.DimensionId,
+                    dimension.DimensionName,
+                    dimension.ValueId,
+                    dimension.ValueName,
+                    dimension.Description,
+                    dimension.Assumption,
+                    ToParameterValues(dimension.Parameters),
+                    dimension.KnownFailureModes.Order(StringComparer.OrdinalIgnoreCase).ToArray()))
+                .ToArray(),
+            manifest.KnownFailureModes.Order(StringComparer.OrdinalIgnoreCase).ToArray());
+    }
+
     private sealed record RunSummaryContext(
         string SourceType,
         string BoundaryRule,
@@ -527,6 +678,37 @@ public static class AiAnalysisContextBuilders
         IReadOnlyList<CollapseContext> CollapseEvents,
         IReadOnlyList<SensitivityContext> Sensitivity,
         IReadOnlyList<ModelRobustnessContext> ModelRobustness);
+
+    private sealed record ModelCritiqueContext(
+        string SourceType,
+        string BoundaryRule,
+        IReadOnlyList<string> Exclusions,
+        IReadOnlyList<ModelManifestContext> Manifests,
+        RunReferenceContext? Run,
+        IReadOnlyList<ModelSummaryContext> RunModels,
+        IReadOnlyList<StressRunContext> StressRuns,
+        IReadOnlyList<CollapseContext> CollapseEvents,
+        IReadOnlyList<ModelRobustnessContext> ModelRobustness);
+
+    private sealed record ModelManifestContext(
+        string Model,
+        string Version,
+        string Description,
+        IReadOnlyList<ModelAssumptionContext> Assumptions,
+        IReadOnlyList<GovernanceDimensionContext> GovernanceDimensions,
+        IReadOnlyList<string> KnownFailureModes);
+
+    private sealed record ModelAssumptionContext(string Name, double Default, string Description);
+
+    private sealed record GovernanceDimensionContext(
+        string DimensionId,
+        string DimensionName,
+        string ValueId,
+        string ValueName,
+        string Description,
+        string Assumption,
+        IReadOnlyList<ParameterValueContext> Parameters,
+        IReadOnlyList<string> KnownFailureModes);
 
     private sealed record StressRunContext(
         int RunIndex,

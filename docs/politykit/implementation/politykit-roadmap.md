@@ -14,13 +14,21 @@ PolityKit/
   README.md
   LICENSE
   docs/
-    add-metric.md
-    add-model.md
-    add-scenario.md
-    contributing.md
-    ROADMAP.md
-    scenarios.md
-    scenario.schema.json
+    politykit/
+      add-metric.md
+      add-model.md
+      add-scenario.md
+      contributing.md
+      governance-presets.md
+      scenarios.md
+      scenario.schema.json
+      implementation/
+        politykit-roadmap.md
+        v0.6-implementation-plan.md
+        v0.7-implementation-plan.md
+        v0.8-implementation-plan.md
+    charterfall/
+      implementation/
   examples/
     corruption-stress.json
     housing-displacement.json

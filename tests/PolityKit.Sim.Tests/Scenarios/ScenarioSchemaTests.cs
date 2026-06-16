@@ -125,7 +125,7 @@ public sealed class ScenarioSchemaTests
 
         while (directory is not null)
         {
-            var schemaPath = Path.Combine(directory.FullName, "docs", "scenario.schema.json");
+            var schemaPath = Path.Combine(directory.FullName, "docs", "politykit", "scenario.schema.json");
             if (File.Exists(schemaPath))
             {
                 return schemaPath;
@@ -134,7 +134,7 @@ public sealed class ScenarioSchemaTests
             directory = directory.Parent;
         }
 
-        throw new FileNotFoundException("Could not find docs/scenario.schema.json.");
+        throw new FileNotFoundException("Could not find docs/politykit/scenario.schema.json.");
     }
 
     private static string FindExamplesPath()
