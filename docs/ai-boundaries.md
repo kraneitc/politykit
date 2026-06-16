@@ -23,6 +23,18 @@ AI-assisted artifacts should include an `aiAnalysis` record using the shared `Ai
   "inputFiles": [
     "runs/example/summary.json"
   ],
+  "scenarioNames": [
+    "Civic Baseline"
+  ],
+  "modelNames": [
+    "TrustModel"
+  ],
+  "seeds": [
+    12345
+  ],
+  "metricNames": [
+    "Trust"
+  ],
   "providerName": "example-provider",
   "providerModel": "example-model",
   "promptTemplateVersion": "run-summary-v1",
@@ -38,6 +50,10 @@ When no AI analysis was used, outputs should record:
   "used": false,
   "inputRunIds": [],
   "inputFiles": [],
+  "scenarioNames": [],
+  "modelNames": [],
+  "seeds": [],
+  "metricNames": [],
   "providerName": null,
   "providerModel": null,
   "promptTemplateVersion": null,

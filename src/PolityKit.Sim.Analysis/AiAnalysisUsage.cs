@@ -11,6 +11,14 @@ public sealed class AiAnalysisUsage
 
     public IReadOnlyList<string> InputFiles { get; init; } = [];
 
+    public IReadOnlyList<string> ScenarioNames { get; init; } = [];
+
+    public IReadOnlyList<string> ModelNames { get; init; } = [];
+
+    public IReadOnlyList<int> Seeds { get; init; } = [];
+
+    public IReadOnlyList<string> MetricNames { get; init; } = [];
+
     public string? ProviderName { get; init; }
 
     public string? ProviderModel { get; init; }

@@ -20,6 +20,10 @@ public sealed class AiAnalysisUsageTests
         Assert.False(usage.Used);
         Assert.Empty(usage.InputRunIds);
         Assert.Empty(usage.InputFiles);
+        Assert.Empty(usage.ScenarioNames);
+        Assert.Empty(usage.ModelNames);
+        Assert.Empty(usage.Seeds);
+        Assert.Empty(usage.MetricNames);
         Assert.Null(usage.ProviderName);
         Assert.Null(usage.ProviderModel);
         Assert.Null(usage.PromptTemplateVersion);
@@ -38,6 +42,10 @@ public sealed class AiAnalysisUsageTests
             Used = true,
             InputRunIds = [runId],
             InputFiles = ["runs/example/summary.json"],
+            ScenarioNames = ["Civic Baseline"],
+            ModelNames = ["TrustModel"],
+            Seeds = [12345],
+            MetricNames = ["Trust"],
             ProviderName = "example-provider",
             ProviderModel = "example-model",
             PromptTemplateVersion = "run-summary-v1",
@@ -51,6 +59,10 @@ public sealed class AiAnalysisUsageTests
         Assert.True(restored.Used);
         Assert.Equal([runId], restored.InputRunIds);
         Assert.Equal(["runs/example/summary.json"], restored.InputFiles);
+        Assert.Equal(["Civic Baseline"], restored.ScenarioNames);
+        Assert.Equal(["TrustModel"], restored.ModelNames);
+        Assert.Equal([12345], restored.Seeds);
+        Assert.Equal(["Trust"], restored.MetricNames);
         Assert.Equal("example-provider", restored.ProviderName);
         Assert.Equal("example-model", restored.ProviderModel);
         Assert.Equal("run-summary-v1", restored.PromptTemplateVersion);

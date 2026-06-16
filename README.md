@@ -505,7 +505,7 @@ Invoke-RestMethod http://localhost:5020/api/runs
 
 The API stores run records as JSON files under `data/runs` by default. Configure `RunStorage:Directory` to change the storage location.
 
-API run, sweep, stress, and comparison responses include `aiAnalysis`. By default this records `used: false`; AI-generated text, if added later, must stay advisory and record provenance rather than becoming authoritative simulation data.
+API run, sweep, stress, and comparison responses include `aiAnalysis`. By default this records `used: false`; AI-generated text, if added later, must stay advisory and record provenance such as source run IDs, files, scenarios, models, seeds, metrics, provider, model, prompt template version, and creation time rather than becoming authoritative simulation data.
 
 See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, and privacy note for data sent to external providers.
 
@@ -696,7 +696,7 @@ Every run records:
 
 ### Keep AI Advisory
 
-AI analysis is optional and never required to run simulations. AI output may help explain or propose follow-up artifacts, but it is not simulation data and must not change deterministic run results. Any AI-assisted artifact should record whether AI was used, the input run IDs or files it read, and the provider/model that generated the text.
+AI analysis is optional and never required to run simulations. AI output may help explain or propose follow-up artifacts, but it is not simulation data and must not change deterministic run results. Any AI-assisted artifact should record whether AI was used, the input run IDs or files it read, the scenarios, models, seeds, and metrics it referenced, and the provider/model that generated the text.
 
 ## Interpreting Results
 
