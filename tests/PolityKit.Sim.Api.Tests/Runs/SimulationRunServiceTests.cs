@@ -383,7 +383,8 @@ public sealed class SimulationRunServiceTests
             new MetricCatalog(),
             scenarioResolver,
             store,
-            new AiAnalysisService());
+            new AiAnalysisService(),
+            new ScenarioValidator());
     }
 
     private static ScenarioDefinition CreateScenario()

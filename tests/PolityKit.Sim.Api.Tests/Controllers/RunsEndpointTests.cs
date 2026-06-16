@@ -9,6 +9,8 @@ using AiAnalysisKind = PolityKit.Sim.Analysis.AiAnalysisKind;
 using AiAnalysisRequest = PolityKit.Sim.Analysis.AiAnalysisRequest;
 using AiAnalysisResult = PolityKit.Sim.Analysis.AiAnalysisResult;
 using AiAnalysisStatus = PolityKit.Sim.Analysis.AiAnalysisStatus;
+using AiScenarioSuggestionArtifact = PolityKit.Sim.Analysis.AiScenarioSuggestionArtifact;
+using AiScenarioSuggestionDraft = PolityKit.Sim.Analysis.AiScenarioSuggestionDraft;
 using IAiAnalysisProvider = PolityKit.Sim.Analysis.IAiAnalysisProvider;
 
 namespace PolityKit.Sim.Api.Tests.Controllers;
@@ -769,6 +771,108 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateScenarioSuggestionReturnsValidatedDraft()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "Review this draft before saving it as a scenario file.",
+            [],
+            ["fake warning"],
+            ["PolityKit.Sim.Cli suggest-scenario --bundle runs/example"],
+            new AiScenarioSuggestionDraft(
+                new PolityKit.Sim.Core.Scenarios.ScenarioDefinition
+                {
+                    Name = "Draft Food Stress Follow-up",
+                    Seed = 12345,
+                    Ticks = 20,
+                    InitialPopulation = 25,
+                    InitialResources = new PolityKit.Sim.Core.World.ResourcePool
+                    {
+                        Food = 50,
+                        Medicine = 20,
+                        Housing = 20,
+                        AdminCapacity = 5,
+                        ProductionCapacity = 5
+                    },
+                    Shocks =
+                    [
+                        new PolityKit.Sim.Core.Scenarios.ShockDefinition
+                        {
+                            Tick = 5,
+                            Type = "CropFailure",
+                            Severity = 0.3
+                        }
+                    ]
+                },
+                ["Add a moderate crop failure."],
+                "Probe recovery under a smaller shock.")));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/scenario-suggestions", null);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiScenarioSuggestionArtifact>();
+        Assert.NotNull(artifact);
+        Assert.True(artifact.CanSave);
+        Assert.True(artifact.Validation.IsValid);
+        Assert.Empty(artifact.Validation.Errors);
+        Assert.NotNull(artifact.Draft);
+        Assert.True(artifact.Draft.IsDraft);
+        Assert.Equal("Draft Food Stress Follow-up", artifact.Draft.Scenario.Name);
+        Assert.Equal(AiAnalysisKind.ScenarioSuggestion, artifact.Analysis.Kind);
+        Assert.True(artifact.Analysis.AiAnalysis.Used);
+        Assert.Equal([run.Id], artifact.Analysis.AiAnalysis.InputRunIds);
+        Assert.NotNull(provider.LastRequest);
+        Assert.Equal(AiAnalysisKind.ScenarioSuggestion, provider.LastRequest.Kind);
+        Assert.Contains("\"sourceType\": \"scenario-suggestion\"", provider.LastRequest.Context);
+        Assert.Contains("Shock tick must be within", provider.LastRequest.Context);
+        Assert.Contains("\"observedFailures\"", provider.LastRequest.Context);
+    }
+
+    [Fact]
+    public async Task CreateScenarioSuggestionReportsInvalidProviderDraftWithoutAcceptingIt()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "This draft is intentionally invalid.",
+            [],
+            [],
+            [],
+            new PolityKit.Sim.Core.Scenarios.ScenarioDefinition
+            {
+                Name = "",
+                Ticks = -1,
+                InitialPopulation = -5
+            }));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/scenario-suggestions", null);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiScenarioSuggestionArtifact>();
+        Assert.NotNull(artifact);
+        Assert.False(artifact.CanSave);
+        Assert.False(artifact.Validation.IsValid);
+        Assert.Contains("Scenario name is required.", artifact.Validation.Errors);
+        Assert.Contains("Scenario ticks must be greater than zero.", artifact.Validation.Errors);
+        Assert.Contains("Initial population cannot be negative.", artifact.Validation.Errors);
+    }
+
+    [Fact]
     public async Task RunSweepStressAndComparisonWorkWithoutAiConfiguration()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -837,6 +941,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     [InlineData("/api/runs/{0}/events")]
     [InlineData("/api/runs/{0}/dashboard")]
     [InlineData("/api/runs/{0}/ai-summary")]
+    [InlineData("/api/runs/{0}/scenario-suggestions")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -844,6 +949,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         var route = string.Format(routeTemplate, Guid.NewGuid());
 
         var response = route.EndsWith("/ai-summary", StringComparison.Ordinal)
+            || route.EndsWith("/scenario-suggestions", StringComparison.Ordinal)
             ? await client.PostAsync(route, null)
             : await client.GetAsync(route);
 

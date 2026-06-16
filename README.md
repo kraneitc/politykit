@@ -286,6 +286,16 @@ dotnet run --project src/PolityKit.Sim.Cli -- summary \
 
 The fake provider is local and deterministic. It creates `ai-summary.json` with provenance and boundary metadata, but the generated text is advisory interpretation, not simulation data.
 
+Generate a validated scenario suggestion draft from the same completed bundle:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- suggest-scenario \
+  --bundle runs/village-food-crisis-12345 \
+  --provider fake
+```
+
+This writes `scenario-suggestion-draft.json` only when the provider returned a draft and the existing scenario validator accepts it. The draft remains a proposed artifact for review, not an automatically accepted scenario file.
+
 After a sweep, inspect:
 
 - `sweep-summary.json` for every parameter combination, final metrics, best/worst runs by metric, and a ranked sensitivity report.
@@ -520,7 +530,7 @@ API run, sweep, stress, and comparison responses include `aiAnalysis`. By defaul
 
 The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
 
-For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run.
+For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run or `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft.
 
 See [AI boundaries and safety](docs/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
@@ -539,6 +549,7 @@ GET  /api/runs/{id}/metrics
 GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
 POST /api/runs/{id}/ai-summary
+POST /api/runs/{id}/scenario-suggestions
 POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}
 POST /api/runs/sweep

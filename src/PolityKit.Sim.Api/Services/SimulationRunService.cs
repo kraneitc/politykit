@@ -19,7 +19,8 @@ public sealed class SimulationRunService(
     IMetricCatalog metricCatalog,
     ScenarioResolver scenarioResolver,
     IRunStore runStore,
-    AiAnalysisService aiAnalysisService)
+    AiAnalysisService aiAnalysisService,
+    IScenarioValidator scenarioValidator)
 {
     public StoredRun CreateRun(CreateRunRequest request)
     {
@@ -227,6 +228,28 @@ public sealed class SimulationRunService(
         return await aiAnalysisService.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<AiScenarioSuggestionArtifact?> CreateScenarioSuggestionAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var storedRun = runStore.Get(id);
+        if (storedRun is null)
+        {
+            return null;
+        }
+
+        var configuration = GetConfiguration(storedRun);
+        var sourceScenario = scenarioResolver.Resolve(configuration.ScenarioName);
+        var request = AiScenarioSuggestionContextBuilder.BuildRequest(
+            sourceScenario,
+            storedRun.Result,
+            configuration.Parameters,
+            FailureAnalysis.DetectCollapses(storedRun.Result),
+            runId: storedRun.Id);
+        var analysis = await aiAnalysisService.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false);
+        return BuildScenarioSuggestionArtifact(analysis);
+    }
+
     private StoredRun RunAndStore(
         string scenarioName,
         int seed,
@@ -293,6 +316,24 @@ public sealed class SimulationRunService(
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private AiScenarioSuggestionArtifact BuildScenarioSuggestionArtifact(AiAnalysisArtifact analysis)
+    {
+        var draft = AiScenarioSuggestionDraftReader.ReadDraft(analysis.Result);
+        if (draft is null)
+        {
+            return new AiScenarioSuggestionArtifact(
+                analysis,
+                null,
+                new AiScenarioSuggestionValidation(false, ["Provider did not return a scenario draft."]));
+        }
+
+        var validation = scenarioValidator.Validate(draft.Scenario);
+        return new AiScenarioSuggestionArtifact(
+            analysis,
+            draft,
+            new AiScenarioSuggestionValidation(validation.IsValid, validation.Errors));
     }
 
     private static RunConfiguration GetConfiguration(StoredRun run)

@@ -37,6 +37,7 @@ internal static class Program
                 "sweep" => Sweep(args[1..]),
                 "stress" => Stress(args[1..]),
                 "summary" => Summary(args[1..]),
+                "suggest-scenario" => SuggestScenario(args[1..]),
                 "list-models" => ListModels(),
                 _ => Fail($"Unknown command '{args[0]}'.")
             };
@@ -143,6 +144,63 @@ internal static class Program
         WriteJson(outputPath, artifact);
         Console.WriteLine($"Wrote AI summary artifact to {Path.GetFullPath(outputPath)}");
         Console.WriteLine($"Status: {artifact.Result.Status}");
+        return 0;
+    }
+
+    private static int SuggestScenario(string[] args)
+    {
+        var bundleDirectory = ReadSummaryBundleDirectory(args);
+        var providerName = ReadOption(args, "--provider") ?? DisabledAiAnalysisProvider.Name;
+        var outputPath = ReadOption(args, "--out") ?? Path.Combine(bundleDirectory, "scenario-suggestion-draft.json");
+        var summaryPath = Path.Combine(bundleDirectory, "summary.json");
+        var configPath = Path.Combine(bundleDirectory, "config.json");
+
+        if (!File.Exists(summaryPath))
+        {
+            throw new InvalidOperationException($"Run bundle summary file was not found at '{summaryPath}'.");
+        }
+
+        var summary = JsonSerializer.Deserialize<SimulationRunSummary>(File.ReadAllText(summaryPath), JsonOptions)
+            ?? throw new InvalidOperationException($"Run bundle summary file '{summaryPath}' could not be read.");
+        var config = File.Exists(configPath)
+            ? JsonSerializer.Deserialize<RunBundleConfig>(File.ReadAllText(configPath), JsonOptions) ?? new RunBundleConfig()
+            : new RunBundleConfig();
+        var sourceScenario = config.Scenario ?? new ScenarioDefinition
+        {
+            Name = summary.ScenarioName,
+            Seed = summary.Seed,
+            Ticks = summary.Ticks
+        };
+        var request = AiScenarioSuggestionContextBuilder.BuildRequest(
+            sourceScenario,
+            summary,
+            config.Parameters,
+            sourceFiles: File.Exists(configPath) ? [summaryPath, configPath] : [summaryPath]);
+        IAiAnalysisProvider provider = string.Equals(providerName, FakeAiAnalysisProvider.Name, StringComparison.OrdinalIgnoreCase)
+            ? new FakeAiAnalysisProvider()
+            : new DisabledAiAnalysisProvider();
+        var analysis = new AiAnalysisService(provider, new AiAnalysisOptions
+        {
+            Enabled = provider is FakeAiAnalysisProvider,
+            ProviderName = provider.ProviderName
+        }).AnalyzeAsync(request).GetAwaiter().GetResult();
+        var artifact = BuildScenarioSuggestionArtifact(analysis, new ScenarioValidator());
+
+        if (!artifact.CanSave)
+        {
+            var message = string.Join("; ", artifact.Validation.Errors);
+            throw new InvalidOperationException($"Scenario suggestion draft was not written: {message}");
+        }
+
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        WriteJson(outputPath, artifact);
+        Console.WriteLine($"Wrote scenario suggestion draft artifact to {Path.GetFullPath(outputPath)}");
+        Console.WriteLine("Draft status: valid");
         return 0;
     }
 
@@ -615,6 +673,26 @@ internal static class Program
             .ToArray();
     }
 
+    private static AiScenarioSuggestionArtifact BuildScenarioSuggestionArtifact(
+        AiAnalysisArtifact analysis,
+        IScenarioValidator scenarioValidator)
+    {
+        var draft = AiScenarioSuggestionDraftReader.ReadDraft(analysis.Result);
+        if (draft is null)
+        {
+            return new AiScenarioSuggestionArtifact(
+                analysis,
+                null,
+                new AiScenarioSuggestionValidation(false, ["Provider did not return a scenario draft."]));
+        }
+
+        var validation = scenarioValidator.Validate(draft.Scenario);
+        return new AiScenarioSuggestionArtifact(
+            analysis,
+            draft,
+            new AiScenarioSuggestionValidation(validation.IsValid, validation.Errors));
+    }
+
     private static string FormatParameters(IReadOnlyDictionary<string, double> parameters)
     {
         return string.Join(';', parameters
@@ -662,6 +740,7 @@ internal static class Program
           PolityKit.Sim.Cli sweep [options]
           PolityKit.Sim.Cli stress [options]
           PolityKit.Sim.Cli summary --bundle <directory> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli suggest-scenario --bundle <directory> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli list-models
 
         Run options:
@@ -684,11 +763,14 @@ internal static class Program
           PolityKit.Sim.Cli sweep --models need-based-allocation --sweep needPriorityWeight=0.75,1.0,1.25
           PolityKit.Sim.Cli stress --scenario village-food-crisis --seed 111,222 --models need-based-allocation,market-based-allocation --sweep needPriorityWeight=0.75,1.0
           PolityKit.Sim.Cli summary --bundle runs/village-food-crisis-12345 --provider fake
+          PolityKit.Sim.Cli suggest-scenario --bundle runs/village-food-crisis-12345 --provider fake
         """);
     }
 
     private sealed class RunBundleConfig
     {
+        public ScenarioDefinition? Scenario { get; init; }
+
         public IReadOnlyList<RunBundleModelConfig> Models { get; init; } = [];
 
         public IReadOnlyDictionary<string, double> Parameters { get; init; } = new Dictionary<string, double>();

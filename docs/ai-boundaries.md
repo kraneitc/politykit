@@ -81,6 +81,8 @@ Provider integrations are optional. The shared analysis layer exposes `IAiAnalys
 
 Default options keep AI disabled. Disabled mode returns an advisory artifact with status `Disabled`, the message `AI analysis is not configured.`, and `aiAnalysis.used: false`.
 
-The built-in `fake` provider is local and deterministic for examples and tests. It can generate advisory run-summary artifacts without sending run data outside the process.
+The built-in `fake` provider is local and deterministic for examples and tests. It can generate advisory run-summary artifacts and scenario suggestion drafts without sending run data outside the process.
+
+Scenario suggestions are drafts. They must pass existing scenario validation before they can be written as draft artifacts, and they do not alter scenario files, run results, model behavior, or scenario validation rules.
 
 When AI is enabled, callers select a provider implementation outside the deterministic simulation path. The shared service applies a timeout, bounds prompt input size, bounds generated text size, preserves external cancellation, and turns provider failures or service timeouts into deterministic failed artifacts. This layer does not log prompt contents.

@@ -135,6 +135,15 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
             : Ok(artifact);
     }
 
+    [HttpPost("{id:guid}/scenario-suggestions")]
+    public async Task<IActionResult> CreateScenarioSuggestion(Guid id, CancellationToken cancellationToken)
+    {
+        var artifact = await simulationRunService.CreateScenarioSuggestionAsync(id, cancellationToken);
+        return artifact is null
+            ? NotFound()
+            : Ok(artifact);
+    }
+
     [HttpGet("{id:guid}/compare/{comparisonId:guid}")]
     public IActionResult CompareRuns(Guid id, Guid comparisonId)
     {
