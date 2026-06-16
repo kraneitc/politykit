@@ -205,6 +205,106 @@ public sealed class AiAnalysisContextBuildersTests
     }
 
     [Fact]
+    public void BuildBatchAnomalyRequestIncludesMixedBaselineAndPresetRuns()
+    {
+        var baselineRunId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var presetRunId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var runs = new[]
+        {
+            StressRun(1, baselineRunId, "Stable", 111, 1, 0.9, []),
+            new StressSweepRunResult(
+                2,
+                "run-002",
+                presetRunId,
+                "Crisis",
+                222,
+                10,
+                "CompositeGovernance:regulated-market",
+                new Dictionary<string, double> { ["stressLevel"] = 2 },
+                [new SweepMetricReport("CompositeGovernance:regulated-market", 9, "Administrative Load", 12, "actions")],
+                [])
+        };
+        var sensitivity = SensitivityAnalysis.BuildReport(runs, new Dictionary<string, double> { ["stressLevel"] = 1 });
+        var result = new StressSweepResult(
+            "mixed-grid",
+            ["Stable", "Crisis"],
+            [111, 222],
+            ["ModelA", "CompositeGovernance:regulated-market"],
+            new Dictionary<string, double> { ["stressLevel"] = 1 },
+            new Dictionary<string, IReadOnlyList<double>> { ["stressLevel"] = [1, 2] },
+            2,
+            runs,
+            SweepAnalysis.BuildBestWorst(runs.Select(run => new SweepRunReport(
+                run.RunIndex,
+                run.Directory,
+                run.Parameters,
+                run.FinalMetrics)).ToArray()),
+            [],
+            sensitivity,
+            RobustnessAnalysis.BuildModelSummaries(runs, sensitivity));
+
+        var request = AiAnalysisContextBuilders.BuildBatchAnomalyRequest(
+            result,
+            sourceFiles: ["runs/mixed/stress-summary.json"]);
+
+        using var document = JsonDocument.Parse(request.Context);
+        var root = document.RootElement;
+
+        Assert.Equal(AiAnalysisKind.BatchAnomalyReport, request.Kind);
+        Assert.Equal(AiAnalysisContextBuilders.BatchAnomalyPromptTemplateVersion, request.Provenance.PromptTemplateVersion);
+        Assert.Equal([baselineRunId, presetRunId], request.Provenance.SourceRunIds);
+        Assert.Equal(["runs/mixed/stress-summary.json"], request.Provenance.SourceFiles);
+        Assert.Equal(["Crisis", "Stable"], request.Provenance.ScenarioNames);
+        Assert.Equal(["CompositeGovernance:regulated-market", "ModelA"], request.Provenance.ModelNames);
+        Assert.Equal([111, 222], request.Provenance.Seeds);
+        Assert.Contains("Needs Met", request.Provenance.MetricNames);
+        Assert.Contains("Administrative Load", request.Provenance.MetricNames);
+        Assert.Equal("batch-anomaly", root.GetProperty("sourceType").GetString());
+        Assert.Contains("Anomaly assistance must reference only runs", request.Context);
+        Assert.Equal(
+            ["ModelA", "CompositeGovernance:regulated-market"],
+            root.GetProperty("runs").EnumerateArray()
+                .Select(run => run.GetProperty("model").GetString()!)
+                .ToArray());
+        Assert.NotEmpty(root.GetProperty("modelRobustness").EnumerateArray());
+    }
+
+    [Fact]
+    public void BatchAnomalyValidationFlagsProviderInventedRunIdsAndModels()
+    {
+        var sourceRunId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var inventedRunId = Guid.Parse("99999999-9999-9999-9999-999999999999");
+        var provenance = new AiAnalysisProvenance(
+            [sourceRunId],
+            ["runs/mixed/stress-summary.json"],
+            ["Stable"],
+            ["ModelA"],
+            [111],
+            ["Needs Met"],
+            AiAnalysisContextBuilders.BatchAnomalyPromptTemplateVersion,
+            "fake",
+            "fake-model",
+            DateTimeOffset.Parse("2026-06-16T00:00:00Z"));
+        var report = new AiBatchAnomalyReport(
+            [
+                new AiBatchAnomaly(
+                    inventedRunId,
+                    "InventedModel",
+                    "Stable",
+                    111,
+                    "Needs Met",
+                    0.1,
+                    "This references an invented model and run.")
+            ]);
+
+        var validation = AiBatchAnomalyReader.Validate(report, provenance);
+
+        Assert.False(validation.IsValid);
+        Assert.Contains("Anomaly 1 references unknown run ID '99999999-9999-9999-9999-999999999999'.", validation.Errors);
+        Assert.Contains("Anomaly 1 references unknown model 'InventedModel'.", validation.Errors);
+    }
+
+    [Fact]
     public void BuildModelCritiqueRequestIncludesManifestsGovernanceDimensionsAndRunDiagnostics()
     {
         var runId = Guid.Parse("33333333-3333-3333-3333-333333333333");

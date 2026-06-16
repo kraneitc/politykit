@@ -279,6 +279,7 @@ After a run, inspect:
 - `ai-analysis.json` for whether advisory AI analysis was used. Default simulation runs record `used: false`.
 - `ai-summary.json` after running the optional `summary` command for an advisory generated interpretation of the run.
 - `ai-model-critique.json` after running the optional `critique-model` command for advisory model critique fields.
+- `ai-anomalies.json` after running the optional `ai-anomalies` command against a stress summary.
 - `metrics.csv` for metric values by tick.
 - `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
 - `citizens-final.csv` for final citizen state.
@@ -370,6 +371,16 @@ For mixed baseline-plus-preset stress runs, `modelRobustness` uses the same summ
   ]
 }
 ```
+
+Generate an advisory batch anomaly artifact from a completed stress summary:
+
+```bash
+dotnet run --project src/PolityKit.Sim.Cli -- ai-anomalies \
+  --stress-summary runs/baseline-preset-comparison-stress/stress-summary.json \
+  --provider fake
+```
+
+This writes `ai-anomalies.json` with structured anomaly candidates for model, scenario, seed, metric, observed value, and explanation. The artifact flags provider output that references run IDs, models, scenarios, seeds, or metrics that were not present in the source stress summary.
 
 ### Use the API
 
@@ -549,7 +560,7 @@ API run, sweep, stress, and comparison responses include `aiAnalysis`. By defaul
 
 The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
 
-For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft, or `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique.
+For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft, `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique, or `POST /api/runs/stress/ai/anomalies` with a stress request body to generate advisory anomaly candidates from the resulting stress summary.
 
 See [AI boundaries and safety](docs/politykit/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
@@ -574,6 +585,7 @@ POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}
 POST /api/runs/sweep
 POST /api/runs/stress
+POST /api/runs/stress/ai/anomalies
 ```
 
 Example run request:

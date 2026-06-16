@@ -39,6 +39,7 @@ internal static class Program
                 "summary" => Summary(args[1..]),
                 "suggest-scenario" => SuggestScenario(args[1..]),
                 "critique-model" => CritiqueModel(args[1..]),
+                "ai-anomalies" => AiAnomalies(args[1..]),
                 "list-models" => ListModels(),
                 _ => Fail($"Unknown command '{args[0]}'.")
             };
@@ -263,6 +264,55 @@ internal static class Program
             Console.WriteLine($"Bundle models: {string.Join(", ", config.Models.Select(model => model.Name))}");
         }
 
+        return 0;
+    }
+
+    private static int AiAnomalies(string[] args)
+    {
+        var stressSummaryPath = ReadOption(args, "--stress-summary");
+        if (string.IsNullOrWhiteSpace(stressSummaryPath))
+        {
+            throw new InvalidOperationException("The ai-anomalies command requires --stress-summary <file>.");
+        }
+
+        stressSummaryPath = Path.GetFullPath(stressSummaryPath);
+        if (!File.Exists(stressSummaryPath))
+        {
+            throw new InvalidOperationException($"Stress summary file was not found at '{stressSummaryPath}'.");
+        }
+
+        var providerName = ReadOption(args, "--provider") ?? DisabledAiAnalysisProvider.Name;
+        var defaultOutputDirectory = Path.GetDirectoryName(stressSummaryPath) ?? Directory.GetCurrentDirectory();
+        var outputPath = ReadOption(args, "--out") ?? Path.Combine(defaultOutputDirectory, "ai-anomalies.json");
+        var stress = JsonSerializer.Deserialize<StressSweepResult>(File.ReadAllText(stressSummaryPath), JsonOptions)
+            ?? throw new InvalidOperationException($"Stress summary file '{stressSummaryPath}' could not be read.");
+        var request = AiAnalysisContextBuilders.BuildBatchAnomalyRequest(
+            stress,
+            sourceFiles: [stressSummaryPath]);
+        IAiAnalysisProvider provider = string.Equals(providerName, FakeAiAnalysisProvider.Name, StringComparison.OrdinalIgnoreCase)
+            ? new FakeAiAnalysisProvider()
+            : new DisabledAiAnalysisProvider();
+        var analysis = new AiAnalysisService(provider, new AiAnalysisOptions
+        {
+            Enabled = provider is FakeAiAnalysisProvider,
+            ProviderName = provider.ProviderName
+        }).AnalyzeAsync(request).GetAwaiter().GetResult();
+        var report = AiBatchAnomalyReader.ReadReport(analysis.Result);
+        var artifact = new AiBatchAnomalyArtifact(
+            analysis,
+            report,
+            AiBatchAnomalyReader.Validate(report, analysis.Provenance));
+
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        WriteJson(outputPath, artifact);
+        Console.WriteLine($"Wrote AI anomaly artifact to {Path.GetFullPath(outputPath)}");
+        Console.WriteLine($"Status: {artifact.Analysis.Result.Status}");
+        Console.WriteLine($"Validation: {(artifact.Validation.IsValid ? "valid" : "flagged")}");
         return 0;
     }
 
@@ -804,6 +854,7 @@ internal static class Program
           PolityKit.Sim.Cli summary --bundle <directory> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli suggest-scenario --bundle <directory> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli critique-model --bundle <directory> --model <name> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli ai-anomalies --stress-summary <file> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli list-models
 
         Run options:
@@ -828,6 +879,7 @@ internal static class Program
           PolityKit.Sim.Cli summary --bundle runs/village-food-crisis-12345 --provider fake
           PolityKit.Sim.Cli suggest-scenario --bundle runs/village-food-crisis-12345 --provider fake
           PolityKit.Sim.Cli critique-model --bundle runs/village-food-crisis-12345 --model need-based-allocation --provider fake
+          PolityKit.Sim.Cli ai-anomalies --stress-summary runs/food-crisis-stress/stress-summary.json --provider fake
         """);
     }
 

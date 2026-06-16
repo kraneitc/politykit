@@ -69,6 +69,26 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
         }
     }
 
+    [HttpPost("stress/ai/anomalies")]
+    public async Task<IActionResult> CreateStressAnomalies(
+        [FromBody] StressSweepRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return Ok(await simulationRunService.CreateStressAnomaliesAsync(request, cancellationToken));
+        }
+        catch (InvalidOperationException exception)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Stress anomaly request is invalid.",
+                Detail = exception.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+    }
+
     [HttpPost("{id:guid}/rerun")]
     public IActionResult Rerun(Guid id, [FromBody] RerunRequest? request)
     {

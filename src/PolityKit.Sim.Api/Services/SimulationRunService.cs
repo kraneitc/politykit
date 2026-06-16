@@ -279,6 +279,16 @@ public sealed class SimulationRunService(
         return new AiModelCritiqueArtifact(analysis, AiModelCritiqueReader.ReadCritique(analysis.Result));
     }
 
+    public async Task<AiBatchAnomalyArtifact> CreateStressAnomaliesAsync(
+        ApiStressSweepRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var stress = CreateStress(request);
+        var analysisRequest = AiAnalysisContextBuilders.BuildBatchAnomalyRequest(ToStressSweepResult(stress));
+        var analysis = await aiAnalysisService.AnalyzeAsync(analysisRequest, cancellationToken).ConfigureAwait(false);
+        return BuildBatchAnomalyArtifact(analysis);
+    }
+
     private StoredRun RunAndStore(
         string scenarioName,
         int seed,
@@ -363,6 +373,67 @@ public sealed class SimulationRunService(
             analysis,
             draft,
             new AiScenarioSuggestionValidation(validation.IsValid, validation.Errors));
+    }
+
+    private static AiBatchAnomalyArtifact BuildBatchAnomalyArtifact(AiAnalysisArtifact analysis)
+    {
+        var report = AiBatchAnomalyReader.ReadReport(analysis.Result);
+        var validation = AiBatchAnomalyReader.Validate(report, analysis.Provenance);
+        return new AiBatchAnomalyArtifact(analysis, report, validation);
+    }
+
+    private static StressSweepResult ToStressSweepResult(StressSweepResponse response)
+    {
+        var runs = response.Runs
+            .Select(run => new StressSweepRunResult(
+                run.RunIndex,
+                null,
+                run.Run.Id == Guid.Empty ? null : run.Run.Id,
+                run.ScenarioName,
+                run.Seed,
+                run.Ticks,
+                run.Model,
+                run.Parameters,
+                run.FinalMetrics
+                    .Select(metric => new SweepMetricReport(
+                        metric.Model,
+                        metric.Tick,
+                        metric.Name,
+                        metric.Value,
+                        metric.Unit))
+                    .ToArray(),
+                run.CollapseEvents))
+            .ToArray();
+
+        return new StressSweepResult(
+            response.GridName,
+            response.Scenarios,
+            response.Seeds,
+            response.Models,
+            response.BaseParameters,
+            response.Sweep,
+            response.RunCount,
+            runs,
+            response.BestWorst
+                .Select(report => new SweepBestWorstReport(
+                    report.Model,
+                    report.Metric,
+                    report.Unit,
+                    report.BestDirection,
+                    new SweepMetricRunReport(
+                        report.Best.RunIndex,
+                        report.Best.Directory,
+                        report.Best.Value,
+                        report.Best.Parameters),
+                    new SweepMetricRunReport(
+                        report.Worst.RunIndex,
+                        report.Worst.Directory,
+                        report.Worst.Value,
+                        report.Worst.Parameters)))
+                .ToArray(),
+            response.CollapseEvents,
+            response.Sensitivity,
+            response.ModelRobustness);
     }
 
     private static RunConfiguration GetConfiguration(StoredRun run)

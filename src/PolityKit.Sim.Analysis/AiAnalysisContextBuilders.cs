@@ -11,6 +11,7 @@ public static class AiAnalysisContextBuilders
     public const string RunComparisonPromptTemplateVersion = "run-comparison-context-v1";
     public const string StressSummaryPromptTemplateVersion = "stress-summary-context-v1";
     public const string ModelCritiquePromptTemplateVersion = "model-critique-context-v1";
+    public const string BatchAnomalyPromptTemplateVersion = "batch-anomaly-context-v1";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -167,6 +168,31 @@ public static class AiAnalysisContextBuilders
         StressSweepResult result,
         string promptTemplateVersion = StressSummaryPromptTemplateVersion)
     {
+        return BuildStressSummaryRequest(
+            result,
+            "stress-summary",
+            sourceFiles: null,
+            promptTemplateVersion);
+    }
+
+    public static AiAnalysisRequest BuildBatchAnomalyRequest(
+        StressSweepResult result,
+        IReadOnlyList<string>? sourceFiles = null,
+        string promptTemplateVersion = BatchAnomalyPromptTemplateVersion)
+    {
+        return BuildStressSummaryRequest(
+            result,
+            "batch-anomaly",
+            sourceFiles,
+            promptTemplateVersion);
+    }
+
+    private static AiAnalysisRequest BuildStressSummaryRequest(
+        StressSweepResult result,
+        string sourceType,
+        IReadOnlyList<string>? sourceFiles,
+        string promptTemplateVersion)
+    {
         ArgumentNullException.ThrowIfNull(result);
 
         var runIds = result.Runs
@@ -197,9 +223,15 @@ public static class AiAnalysisContextBuilders
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var context = new StressSummaryContext(
-            "stress-summary",
+            sourceType,
             AiAnalysisUsage.AdvisoryOutputRule,
-            RedactionNotes,
+            sourceType == "batch-anomaly"
+                ? [
+                    .. RedactionNotes,
+                    "Anomaly assistance must reference only runs, models, scenarios, seeds, and metrics present in this context.",
+                    "Anomalies are advisory interpretations of deterministic batch summaries, not simulation data."
+                ]
+                : RedactionNotes,
             result.GridName,
             scenarioNames,
             result.Seeds.Distinct().Order().ToArray(),
@@ -254,7 +286,7 @@ public static class AiAnalysisContextBuilders
             Serialize(context),
             new AiAnalysisProvenance(
                 runIds,
-                [],
+                NormalizeStrings(sourceFiles),
                 scenarioNames,
                 modelNames,
                 result.Seeds.Distinct().Order().ToArray(),

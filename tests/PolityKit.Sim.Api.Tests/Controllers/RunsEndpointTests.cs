@@ -9,6 +9,9 @@ using AiAnalysisKind = PolityKit.Sim.Analysis.AiAnalysisKind;
 using AiAnalysisRequest = PolityKit.Sim.Analysis.AiAnalysisRequest;
 using AiAnalysisResult = PolityKit.Sim.Analysis.AiAnalysisResult;
 using AiAnalysisStatus = PolityKit.Sim.Analysis.AiAnalysisStatus;
+using AiBatchAnomaly = PolityKit.Sim.Analysis.AiBatchAnomaly;
+using AiBatchAnomalyArtifact = PolityKit.Sim.Analysis.AiBatchAnomalyArtifact;
+using AiBatchAnomalyReport = PolityKit.Sim.Analysis.AiBatchAnomalyReport;
 using AiModelCritique = PolityKit.Sim.Analysis.AiModelCritique;
 using AiModelCritiqueArtifact = PolityKit.Sim.Analysis.AiModelCritiqueArtifact;
 using AiModelCritiqueItem = PolityKit.Sim.Analysis.AiModelCritiqueItem;
@@ -928,6 +931,65 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains("\"sourceType\": \"model-critique\"", provider.LastRequest.Context);
         Assert.Contains("\"governanceDimensions\"", provider.LastRequest.Context);
         Assert.Contains("not proof that a model is correct or incorrect", provider.LastRequest.Context);
+    }
+
+    [Fact]
+    public async Task CreateStressAnomaliesUsesProviderAndMixedBaselinePresetContext()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "Review these anomaly candidates against the deterministic stress summary.",
+            [],
+            ["fake warning"],
+            ["PolityKit.Sim.Cli ai-anomalies --stress-summary runs/example/stress-summary.json"],
+            new AiBatchAnomalyReport(
+                [
+                    new AiBatchAnomaly(
+                        null,
+                        "CompositeGovernance:regulated-market",
+                        "Village Food Crisis",
+                        111,
+                        "Administrative Load",
+                        12,
+                        "Administrative load was high for the governance preset under this stress grid.")
+                ])));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var request = new StressSweepRequest
+        {
+            GridName = "anomaly-mixed-grid",
+            Scenarios = ["village-food-crisis"],
+            Seeds = [111],
+            Ticks = 4,
+            Models = ["need-based-allocation", "regulated-market"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needWeightMultiplier"] = [0.8, 1.2]
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress/ai/anomalies", request);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiBatchAnomalyArtifact>();
+        Assert.NotNull(artifact);
+        Assert.True(artifact.CanUse);
+        Assert.True(artifact.Validation.IsValid);
+        Assert.Empty(artifact.Validation.Errors);
+        Assert.Equal(AiAnalysisKind.BatchAnomalyReport, artifact.Analysis.Kind);
+        Assert.True(artifact.Analysis.AiAnalysis.Used);
+        Assert.Equal(["CompositeGovernance:regulated-market", "NeedBasedAllocation"], artifact.Analysis.AiAnalysis.ModelNames);
+        Assert.Equal(["Village Food Crisis"], artifact.Analysis.AiAnalysis.ScenarioNames);
+        Assert.Equal([111], artifact.Analysis.AiAnalysis.Seeds);
+        Assert.NotNull(artifact.Report);
+        var anomaly = Assert.Single(artifact.Report.Anomalies);
+        Assert.Equal("CompositeGovernance:regulated-market", anomaly.Model);
+        Assert.NotNull(provider.LastRequest);
+        Assert.Equal(AiAnalysisKind.BatchAnomalyReport, provider.LastRequest.Kind);
+        Assert.Contains("\"sourceType\": \"batch-anomaly\"", provider.LastRequest.Context);
+        Assert.Contains("NeedBasedAllocation", provider.LastRequest.Context);
+        Assert.Contains("CompositeGovernance:regulated-market", provider.LastRequest.Context);
+        Assert.Contains("\"modelRobustness\"", provider.LastRequest.Context);
     }
 
     [Fact]
