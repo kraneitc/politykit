@@ -18,7 +18,8 @@ public sealed class SimulationRunService(
     IModelCatalog modelCatalog,
     IMetricCatalog metricCatalog,
     ScenarioResolver scenarioResolver,
-    IRunStore runStore)
+    IRunStore runStore,
+    AiAnalysisService aiAnalysisService)
 {
     public StoredRun CreateRun(CreateRunRequest request)
     {
@@ -207,6 +208,25 @@ public sealed class SimulationRunService(
             parameters);
     }
 
+    public async Task<AiAnalysisArtifact?> CreateRunSummaryAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var storedRun = runStore.Get(id);
+        if (storedRun is null)
+        {
+            return null;
+        }
+
+        var configuration = GetConfiguration(storedRun);
+        var assumptions = SelectAssumptions(configuration.ModelNames);
+        var request = AiAnalysisContextBuilders.BuildRunSummaryRequest(
+            storedRun.Result,
+            configuration.Parameters,
+            assumptions,
+            storedRun.Id);
+
+        return await aiAnalysisService.AnalyzeAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
     private StoredRun RunAndStore(
         string scenarioName,
         int seed,
@@ -259,6 +279,19 @@ public sealed class SimulationRunService(
         return requestedModels
             .Select(modelName => modelCatalog.FindByName(modelName)
                 ?? throw new InvalidOperationException($"Unknown model '{modelName}'."))
+            .ToArray();
+    }
+
+    private IReadOnlyList<string> SelectAssumptions(IReadOnlyList<string> modelNames)
+    {
+        return modelNames
+            .Select(modelName => modelCatalog.FindByName(modelName))
+            .OfType<AllocationModelBase>()
+            .SelectMany(model => model.Manifest.Assumptions
+                .Select(assumption => $"{model.Name}: {assumption.Name} - {assumption.Description}"))
+            .Where(assumption => !string.IsNullOrWhiteSpace(assumption))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 

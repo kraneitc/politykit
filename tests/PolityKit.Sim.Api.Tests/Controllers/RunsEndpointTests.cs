@@ -4,6 +4,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using PolityKit.Sim.Api.Contracts;
 using PolityKit.Sim.Api.Tests.TestHost;
+using AiAnalysisArtifact = PolityKit.Sim.Analysis.AiAnalysisArtifact;
+using AiAnalysisKind = PolityKit.Sim.Analysis.AiAnalysisKind;
+using AiAnalysisRequest = PolityKit.Sim.Analysis.AiAnalysisRequest;
+using AiAnalysisResult = PolityKit.Sim.Analysis.AiAnalysisResult;
+using AiAnalysisStatus = PolityKit.Sim.Analysis.AiAnalysisStatus;
+using IAiAnalysisProvider = PolityKit.Sim.Analysis.IAiAnalysisProvider;
 
 namespace PolityKit.Sim.Api.Tests.Controllers;
 
@@ -719,6 +725,50 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateAiSummaryUsesProviderAndRunSummaryContext()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "The run stayed mostly stable while trust moved. This advisory summary does not claim real-world predictive validity.",
+            [],
+            ["fake warning"],
+            ["PolityKit.Sim.Cli run --scenario village-food-crisis"]));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0
+            }
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai-summary", null);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiAnalysisArtifact>();
+        Assert.NotNull(artifact);
+        Assert.Equal(AiAnalysisKind.RunSummary, artifact.Kind);
+        Assert.Equal(AiAnalysisStatus.Succeeded, artifact.Result.Status);
+        Assert.Equal("The run stayed mostly stable while trust moved. This advisory summary does not claim real-world predictive validity.", artifact.Result.GeneratedText);
+        Assert.True(artifact.AiAnalysis.Used);
+        Assert.Equal("recording-provider", artifact.AiAnalysis.ProviderName);
+        Assert.Equal("recording-model", artifact.AiAnalysis.ProviderModel);
+        Assert.Equal([run.Id], artifact.AiAnalysis.InputRunIds);
+        Assert.Equal(["Village Food Crisis"], artifact.AiAnalysis.ScenarioNames);
+        Assert.Equal(["NeedBasedAllocation"], artifact.AiAnalysis.ModelNames);
+        Assert.Equal([12345], artifact.AiAnalysis.Seeds);
+        Assert.NotNull(provider.LastRequest);
+        Assert.Equal(AiAnalysisKind.RunSummary, provider.LastRequest.Kind);
+        Assert.Contains("\"scenarioName\": \"Village Food Crisis\"", provider.LastRequest.Context);
+        Assert.Contains("\"name\": \"needPriorityWeight\"", provider.LastRequest.Context);
+        Assert.Contains("NeedBasedAllocation:", provider.LastRequest.Context);
+    }
+
+    [Fact]
     public async Task RunSweepStressAndComparisonWorkWithoutAiConfiguration()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -786,13 +836,16 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     [InlineData("/api/runs/{0}/metrics")]
     [InlineData("/api/runs/{0}/events")]
     [InlineData("/api/runs/{0}/dashboard")]
+    [InlineData("/api/runs/{0}/ai-summary")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
         await using var isolatedFactory = CreateIsolatedFactory();
         var client = isolatedFactory.CreateClient();
         var route = string.Format(routeTemplate, Guid.NewGuid());
 
-        var response = await client.GetAsync(route);
+        var response = route.EndsWith("/ai-summary", StringComparison.Ordinal)
+            ? await client.PostAsync(route, null)
+            : await client.GetAsync(route);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -845,5 +898,22 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Empty(usage.InputFiles);
         Assert.Null(usage.ProviderName);
         Assert.Null(usage.ProviderModel);
+    }
+
+    private sealed class RecordingAiProvider(AiAnalysisResult result) : IAiAnalysisProvider
+    {
+        public AiAnalysisRequest? LastRequest { get; private set; }
+
+        public string ProviderName => "recording-provider";
+
+        public string ProviderModel => "recording-model";
+
+        public Task<AiAnalysisResult> AnalyzeAsync(
+            AiAnalysisRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            LastRequest = request;
+            return Task.FromResult(result);
+        }
     }
 }

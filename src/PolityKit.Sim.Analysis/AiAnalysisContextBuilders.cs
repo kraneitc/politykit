@@ -27,7 +27,25 @@ public static class AiAnalysisContextBuilders
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        var summary = SimulationRunSummary.Create(result);
+        return BuildRunSummaryRequest(
+            SimulationRunSummary.Create(result),
+            selectedParameters,
+            relevantAssumptions,
+            runId,
+            sourceFiles,
+            promptTemplateVersion);
+    }
+
+    public static AiAnalysisRequest BuildRunSummaryRequest(
+        SimulationRunSummary summary,
+        IReadOnlyDictionary<string, double>? selectedParameters = null,
+        IReadOnlyList<string>? relevantAssumptions = null,
+        Guid? runId = null,
+        IReadOnlyList<string>? sourceFiles = null,
+        string promptTemplateVersion = RunSummaryPromptTemplateVersion)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+
         var modelNames = summary.Models
             .Select(model => model.ModelName)
             .Distinct(StringComparer.OrdinalIgnoreCase)

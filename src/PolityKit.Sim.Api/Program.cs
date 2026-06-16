@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using PolityKit.Sim.Analysis;
 using PolityKit.Sim.Api.Services;
 using PolityKit.Sim.Engine;
 using PolityKit.Sim.Metrics;
@@ -25,6 +27,7 @@ public class Program
             options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_0;
         });
         builder.Services.Configure<RunStorageOptions>(builder.Configuration.GetSection("RunStorage"));
+        builder.Services.Configure<AiAnalysisOptions>(builder.Configuration.GetSection("AiAnalysis"));
 
         builder.Services.AddSingleton<ISimulationEngine, SimulationEngine>();
         builder.Services.AddSingleton(_ => new GovernancePresetCatalog());
@@ -39,6 +42,16 @@ public class Program
             sp.GetRequiredService<IScenarioValidator>(),
             allowFilePaths: false));
         builder.Services.AddSingleton<IRunStore, FileRunStore>();
+        builder.Services.AddSingleton<IAiAnalysisProvider>(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<AiAnalysisOptions>>().Value;
+            return options.Enabled && string.Equals(options.ProviderName, FakeAiAnalysisProvider.Name, StringComparison.OrdinalIgnoreCase)
+                ? new FakeAiAnalysisProvider()
+                : new DisabledAiAnalysisProvider();
+        });
+        builder.Services.AddSingleton(sp => new AiAnalysisService(
+            sp.GetRequiredService<IAiAnalysisProvider>(),
+            sp.GetRequiredService<IOptions<AiAnalysisOptions>>().Value));
         builder.Services.AddSingleton<SimulationRunService>();
 
         var app = builder.Build();

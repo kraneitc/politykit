@@ -36,6 +36,7 @@ internal static class Program
                 "run" => Run(args[1..]),
                 "sweep" => Sweep(args[1..]),
                 "stress" => Stress(args[1..]),
+                "summary" => Summary(args[1..]),
                 "list-models" => ListModels(),
                 _ => Fail($"Unknown command '{args[0]}'.")
             };
@@ -94,6 +95,54 @@ internal static class Program
         Console.WriteLine($"Ticks: {result.Ticks}");
         Console.WriteLine($"Models: {string.Join(", ", result.ModelResults.Select(model => model.ModelName))}");
 
+        return 0;
+    }
+
+    private static int Summary(string[] args)
+    {
+        var bundleDirectory = ReadSummaryBundleDirectory(args);
+        var providerName = ReadOption(args, "--provider") ?? DisabledAiAnalysisProvider.Name;
+        var outputPath = ReadOption(args, "--out") ?? Path.Combine(bundleDirectory, "ai-summary.json");
+        var summaryPath = Path.Combine(bundleDirectory, "summary.json");
+        var configPath = Path.Combine(bundleDirectory, "config.json");
+
+        if (!File.Exists(summaryPath))
+        {
+            throw new InvalidOperationException($"Run bundle summary file was not found at '{summaryPath}'.");
+        }
+
+        var summary = JsonSerializer.Deserialize<SimulationRunSummary>(File.ReadAllText(summaryPath), JsonOptions)
+            ?? throw new InvalidOperationException($"Run bundle summary file '{summaryPath}' could not be read.");
+        var config = File.Exists(configPath)
+            ? JsonSerializer.Deserialize<RunBundleConfig>(File.ReadAllText(configPath), JsonOptions) ?? new RunBundleConfig()
+            : new RunBundleConfig();
+        var modelNames = config.Models.Count > 0
+            ? config.Models.Select(model => model.Name).Where(name => !string.IsNullOrWhiteSpace(name)).ToArray()
+            : summary.Models.Select(model => model.ModelName).ToArray();
+        var assumptions = SelectAssumptions(new ModelCatalog(), modelNames);
+        var request = AiAnalysisContextBuilders.BuildRunSummaryRequest(
+            summary,
+            config.Parameters,
+            assumptions,
+            sourceFiles: File.Exists(configPath) ? [summaryPath, configPath] : [summaryPath]);
+        IAiAnalysisProvider provider = string.Equals(providerName, FakeAiAnalysisProvider.Name, StringComparison.OrdinalIgnoreCase)
+            ? new FakeAiAnalysisProvider()
+            : new DisabledAiAnalysisProvider();
+        var artifact = new AiAnalysisService(provider, new AiAnalysisOptions
+        {
+            Enabled = provider is FakeAiAnalysisProvider,
+            ProviderName = provider.ProviderName
+        }).AnalyzeAsync(request).GetAwaiter().GetResult();
+
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+        if (!string.IsNullOrWhiteSpace(outputDirectory))
+        {
+            Directory.CreateDirectory(outputDirectory);
+        }
+
+        WriteJson(outputPath, artifact);
+        Console.WriteLine($"Wrote AI summary artifact to {Path.GetFullPath(outputPath)}");
+        Console.WriteLine($"Status: {artifact.Result.Status}");
         return 0;
     }
 
@@ -522,6 +571,50 @@ internal static class Program
         WriteJson(Path.Combine(outputDirectory, "ai-analysis.json"), AiAnalysisUsage.NotUsed());
     }
 
+    private static string ReadSummaryBundleDirectory(string[] args)
+    {
+        var bundleDirectory = ReadOption(args, "--bundle");
+        if (string.IsNullOrWhiteSpace(bundleDirectory))
+        {
+            throw new InvalidOperationException("The summary command requires --bundle <directory>.");
+        }
+
+        return Path.GetFullPath(bundleDirectory);
+    }
+
+    private static string? ReadOption(string[] args, string option)
+    {
+        for (var index = 0; index < args.Length; index++)
+        {
+            if (!string.Equals(args[index], option, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (index + 1 >= args.Length)
+            {
+                throw new InvalidOperationException($"Option '{option}' requires a value.");
+            }
+
+            return args[index + 1];
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> SelectAssumptions(IModelCatalog modelCatalog, IReadOnlyList<string> modelNames)
+    {
+        return modelNames
+            .Select(modelName => modelCatalog.FindByName(modelName))
+            .OfType<AllocationModelBase>()
+            .SelectMany(model => model.Manifest.Assumptions
+                .Select(assumption => $"{model.Name}: {assumption.Name} - {assumption.Description}"))
+            .Where(assumption => !string.IsNullOrWhiteSpace(assumption))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static string FormatParameters(IReadOnlyDictionary<string, double> parameters)
     {
         return string.Join(';', parameters
@@ -568,6 +661,7 @@ internal static class Program
           PolityKit.Sim.Cli run [options]
           PolityKit.Sim.Cli sweep [options]
           PolityKit.Sim.Cli stress [options]
+          PolityKit.Sim.Cli summary --bundle <directory> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli list-models
 
         Run options:
@@ -589,7 +683,20 @@ internal static class Program
           PolityKit.Sim.Cli run --scenario examples/village-food-crisis.json --out runs/village-food-crisis-12345
           PolityKit.Sim.Cli sweep --models need-based-allocation --sweep needPriorityWeight=0.75,1.0,1.25
           PolityKit.Sim.Cli stress --scenario village-food-crisis --seed 111,222 --models need-based-allocation,market-based-allocation --sweep needPriorityWeight=0.75,1.0
+          PolityKit.Sim.Cli summary --bundle runs/village-food-crisis-12345 --provider fake
         """);
+    }
+
+    private sealed class RunBundleConfig
+    {
+        public IReadOnlyList<RunBundleModelConfig> Models { get; init; } = [];
+
+        public IReadOnlyDictionary<string, double> Parameters { get; init; } = new Dictionary<string, double>();
+    }
+
+    private sealed class RunBundleModelConfig
+    {
+        public string Name { get; init; } = "";
     }
 }
 

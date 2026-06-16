@@ -126,6 +126,15 @@ public sealed class RunsController(SimulationRunService simulationRunService, IR
             : Ok(RunMappers.ToDashboardResponse(storedRun));
     }
 
+    [HttpPost("{id:guid}/ai-summary")]
+    public async Task<IActionResult> CreateAiSummary(Guid id, CancellationToken cancellationToken)
+    {
+        var artifact = await simulationRunService.CreateRunSummaryAsync(id, cancellationToken);
+        return artifact is null
+            ? NotFound()
+            : Ok(artifact);
+    }
+
     [HttpGet("{id:guid}/compare/{comparisonId:guid}")]
     public IActionResult CompareRuns(Guid id, Guid comparisonId)
     {
