@@ -149,4 +149,14 @@ public sealed class PrototypeContentProviderTests
         Assert.Empty(preview.Parameters);
         Assert.Equal(["emergency.limited"], preview.GameLayerOnlyClauses);
     }
+
+    [Fact]
+    public void CampaignCrises_MarkFutureExampleSourcesAsIntegrationPending()
+    {
+        var crises = new PrototypeContentProvider().GetCampaignCrises();
+
+        Assert.True(crises[0].IsIntegrationAvailable);
+        Assert.False(crises[1].IsIntegrationAvailable);
+        Assert.False(crises[2].IsIntegrationAvailable);
+    }
 }

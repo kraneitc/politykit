@@ -118,9 +118,13 @@
                                 </div>
                                 <div>
                                     <span>Run input preview</span>
-                                    <pre>@RunInputPreviewJson</pre>
+                                    <pre>@DraftRunRequestJson</pre>
                                 </div>
                             </div>
+                            <details class="debug-request">
+                                <summary>Developer request preview</summary>
+                                <pre>@DraftRunRequestJson</pre>
+                            </details>
                         </section>
                     </section>
                     break;
@@ -182,7 +186,7 @@
                 {
                     <button type="button" class="secondary-action" @onclick="GoBack">Back</button>
                 }
-                <button type="button" class="primary-action" @onclick="PrimaryActionAsync" disabled="@Session.IsBusy">@PrimaryActionText</button>
+                <button type="button" class="primary-action" @onclick="PrimaryActionAsync" disabled="@PrimaryActionDisabled">@PrimaryActionText</button>
             </div>
         </main>
 
@@ -230,7 +234,11 @@
                 <h2>Status</h2>
                 @if (Session.IsBusy)
                 {
-                    <p class="loading-state">Resolving placeholder state...</p>
+                    <p class="loading-state">@ResolvingStatusText</p>
+                }
+                @if (ResolveBlockingMessage is not null)
+                {
+                    <p class="empty-state">@ResolveBlockingMessage</p>
                 }
                 @if (Session.LastError is not null)
                 {
@@ -270,6 +278,14 @@
     private ClauseSelectionValidationResult ClauseValidation =>
         ContentProvider.ValidateClauseSelection(Session.SelectedClauseIds);
 
+    private CreateRunInput DraftRunRequest =>
+        new(
+            ActiveCrisis.PolityKitScenario,
+            ActiveCrisis.Seed,
+            ActiveCrisis.Ticks,
+            ClausePreview.Models,
+            ClausePreview.Parameters);
+
     private string StageTitle => Stage switch
     {
         CharterfallStage.Draft => "Draft",
@@ -301,36 +317,56 @@
             .OfType<CharterClauseDefinition>()
             .Select(clause => clause.DisplayName));
 
-    private string RunInputPreviewJson
-    {
-        get
+    private string DraftRunRequestJson =>
+        System.Text.Json.JsonSerializer.Serialize(DraftRunRequest, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)
         {
-            var models = string.Join(", ", ClausePreview.Models.Select(model => $"\"{model}\""));
-            var parameters = ClausePreview.Parameters.Count == 0
-                ? string.Empty
-                : string.Join(",\n    ", ClausePreview.Parameters.Select(parameter => $"\"{parameter.Key}\": {parameter.Value:0.0}"));
-            var gameLayerOnly = string.Join(", ", ClausePreview.GameLayerOnlyClauses.Select(id => $"\"{id}\""));
-            var presetDimensions = string.Join(", ", ClausePreview.PresetDimensionClauses.Select(id => $"\"{id}\""));
-
-            return "{\n"
-                + $"  \"models\": [{models}],\n"
-                + "  \"parameters\": {"
-                + (parameters.Length == 0 ? "},\n" : $"\n    {parameters}\n  }},\n")
-                + $"  \"presetDimensionClauses\": [{presetDimensions}],\n"
-                + $"  \"gameLayerOnlyClauses\": [{gameLayerOnly}]\n"
-                + "}";
-        }
-    }
+            WriteIndented = true
+        });
 
     private string PrimaryActionText => Stage switch
     {
-        CharterfallStage.Draft => "Resolve Crisis",
+        CharterfallStage.Draft => Session.IsResolvingRun ? "Resolving Crisis" : "Resolve Crisis",
         CharterfallStage.Inquiry => "Open Amendment",
         CharterfallStage.Amendment => "Create Amended Placeholder",
         CharterfallStage.Comparison => "Accept Current Run",
         CharterfallStage.Outcome => "Restart Draft",
         _ => "Continue"
     };
+
+    private bool PrimaryActionDisabled =>
+        Session.IsBusy || (Stage == CharterfallStage.Draft && ResolveBlockingMessage is not null);
+
+    private string ResolvingStatusText => Session.IsResolvingRun
+        ? $"Submitting {ActiveCrisis.PolityKitScenario} with {string.Join(", ", ClausePreview.Models)}..."
+        : "Resolving state...";
+
+    private string? ResolveBlockingMessage
+    {
+        get
+        {
+            if (Stage != CharterfallStage.Draft)
+            {
+                return null;
+            }
+
+            if (!ActiveCrisis.IsIntegrationAvailable)
+            {
+                return $"{ActiveCrisis.DisplayName} is part of the campaign, but run creation is not wired for this scenario yet.";
+            }
+
+            if (!ClauseValidation.IsValid)
+            {
+                return string.Join(" ", ClauseValidation.Errors);
+            }
+
+            if (ClausePreview.Models.Count == 0)
+            {
+                return "Choose a simulation-active charter clause before resolving the crisis.";
+            }
+
+            return null;
+        }
+    }
 
     private string? BackTarget => Stage switch
     {
@@ -438,20 +474,19 @@
         {
             case CharterfallStage.Draft:
                 SyncClauseSelection();
-                if (!ClauseValidation.IsValid)
+                if (ResolveBlockingMessage is not null)
                 {
-                    SessionStore.SetError(string.Join(" ", ClauseValidation.Errors));
+                    SessionStore.SetError(ResolveBlockingMessage);
                     return;
                 }
-                await AddRunAsync("Original");
-                Navigation.NavigateTo("inquiry");
+                await CreateRunAsync("Original");
                 break;
             case CharterfallStage.Inquiry:
                 Session.HasViewedInquiry = true;
                 Navigation.NavigateTo("amend");
                 break;
             case CharterfallStage.Amendment:
-                await AddRunAsync("Amended");
+                AddLocalPendingRun("Amended");
                 Navigation.NavigateTo("compare");
                 break;
             case CharterfallStage.Comparison:
@@ -464,15 +499,47 @@
         }
     }
 
-    private async Task AddRunAsync(string label)
+    private async Task CreateRunAsync(string label)
     {
-        Session.IsBusy = true;
-        var run = await RunClient.CreatePlaceholderRunAsync(label, ActiveCrisis);
+        var request = DraftRunRequest;
+        var requestJson = DraftRunRequestJson;
+        SessionStore.BeginRunResolution(request, requestJson);
+
+        var result = await RunClient.CreateRunAsync(request);
+        if (!result.IsSuccess || result.Id is null)
+        {
+            SessionStore.FailRunResolution(request, result.RawRequest, result.ErrorMessage ?? "PolityKit run creation failed.");
+            return;
+        }
+
+        var run = new PrototypeRunRecord(
+            result.Id.Value.ToString(),
+            label,
+            result.ScenarioName,
+            result.Seed,
+            result.Ticks,
+            IsAuthoritative: true,
+            $"Created by PolityKit at {result.CreatedAt:yyyy-MM-dd HH:mm:ss zzz}");
+
+        SessionStore.CompleteRunResolution(request, result, run);
+        Session.CompactInquirySummary = "Run created. Dashboard inquiry integration is pending the next slice.";
+        Navigation.NavigateTo("inquiry");
+    }
+
+    private void AddLocalPendingRun(string label)
+    {
+        var slug = label.ToLowerInvariant().Replace(' ', '-');
+        var run = new PrototypeRunRecord(
+            $"pending-{slug}-run",
+            label,
+            ActiveCrisis.PolityKitScenario,
+            ActiveCrisis.Seed,
+            ActiveCrisis.Ticks,
+            IsAuthoritative: false,
+            "Integration pending: amendment rerun is not wired yet");
+
         Session.RunHistory.RemoveAll(existing => existing.Label == label);
         Session.RunHistory.Add(run);
-        Session.AuthoritativeRunIds.Remove(run.RunId);
-        Session.CompactInquirySummary = "Placeholder inquiry summary pending deterministic dashboard data.";
-        Session.IsBusy = false;
     }
 
     private void GoBack()

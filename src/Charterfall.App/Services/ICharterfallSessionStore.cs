@@ -17,4 +17,10 @@ public interface ICharterfallSessionStore
         CharterRunInputPreview preview,
         ClauseSelectionValidationResult validation,
         IReadOnlyList<CharterClauseDefinition> selectedClauses);
+
+    void BeginRunResolution(CreateRunInput request, string requestJson);
+
+    void CompleteRunResolution(CreateRunInput request, CreateRunResult result, PrototypeRunRecord runRecord);
+
+    void FailRunResolution(CreateRunInput request, string requestJson, string errorMessage);
 }

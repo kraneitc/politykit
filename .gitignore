@@ -429,4 +429,5 @@ FodyWeavers.xsd
 *.msp
 /runs
 /data/runs
+/src/PolityKit.Sim.Api/data/runs/
 /src/Charterfall.App/App_Data/DataProtectionKeys/

@@ -5,10 +5,11 @@ This is the Milestone 1 lightweight prototype shell for Charterfall. It is the g
 ## Launch
 
 ```powershell
+dotnet run --project src\PolityKit.Sim.Api
 dotnet run --project src\Charterfall.App
 ```
 
-Open the printed local URL. The app opens into the Draft state and exposes Draft, Inquiry, Amendment, Comparison, and Final Outcome through visible navigation and action buttons.
+Open the printed Charterfall local URL. The app opens into the Draft state and exposes Draft, Inquiry, Amendment, Comparison, and Final Outcome through visible navigation and action buttons.
 
 ## Verification
 
@@ -17,7 +18,7 @@ dotnet build PolityKit.slnx
 dotnet test PolityKit.slnx --no-build
 ```
 
-The current shell uses in-memory services and placeholder run records. Placeholder records are marked as integration pending and are not authoritative PolityKit output.
+The Draft Resolve action calls the PolityKit API at `PolityKitApi:BaseUrl`, which defaults to `http://localhost:5020` for local development.
 
 ## Scenario Selection
 
@@ -32,3 +33,7 @@ Chapter 1 is unlocked by default. Future chapters are visible as campaign cards 
 ## Charter Clause Selection
 
 The Draft view lets the player choose one simulation-active allocation method and a small set of preset-backed or presentation-only clauses. The run input preview shows the future PolityKit model IDs and parameters separately from Charterfall-only clause IDs.
+
+## Run Creation
+
+The Draft view submits only executable scenario data and authoritative mapped clauses to `POST /api/runs`. Charterfall-only fields such as selected clause IDs, game-layer-only clauses, chapter state, and campaign notes remain in app session state and are not sent to PolityKit.

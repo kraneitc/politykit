@@ -60,4 +60,41 @@ public sealed class InMemoryCharterfallSessionStore : ICharterfallSessionStore
             ? "No charter clauses selected"
             : string.Join(", ", selectedClauses.Select(clause => clause.DisplayName));
     }
+
+    public void BeginRunResolution(CreateRunInput request, string requestJson)
+    {
+        Current.PendingRunRequest = request;
+        Current.PendingRunRequestJson = requestJson;
+        Current.LastRunError = null;
+        Current.LastError = null;
+        Current.IsResolvingRun = true;
+        Current.IsBusy = true;
+    }
+
+    public void CompleteRunResolution(CreateRunInput request, CreateRunResult result, PrototypeRunRecord runRecord)
+    {
+        Current.PendingRunRequest = null;
+        Current.PendingRunRequestJson = string.Empty;
+        Current.LastSubmittedRunRequest = request;
+        Current.LastSubmittedRunRequestJson = result.RawRequest;
+        Current.LastRunError = null;
+        Current.IsResolvingRun = false;
+        Current.IsBusy = false;
+
+        Current.CurrentRunId = runRecord.RunId;
+        Current.LastRunCreatedAt = result.CreatedAt;
+        Current.LastResolvedScenarioName = result.ScenarioName;
+        Current.AuthoritativeRunIds.Add(runRecord.RunId);
+        Current.RunHistory.Add(runRecord);
+    }
+
+    public void FailRunResolution(CreateRunInput request, string requestJson, string errorMessage)
+    {
+        Current.PendingRunRequest = request;
+        Current.PendingRunRequestJson = requestJson;
+        Current.LastRunError = errorMessage;
+        Current.LastError = errorMessage;
+        Current.IsResolvingRun = false;
+        Current.IsBusy = false;
+    }
 }

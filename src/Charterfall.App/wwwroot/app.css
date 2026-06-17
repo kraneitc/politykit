@@ -302,6 +302,27 @@ p {
     white-space: pre-wrap;
 }
 
+.debug-request {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+    padding: 12px 14px;
+}
+
+.debug-request summary {
+    cursor: pointer;
+    color: var(--accent-strong);
+    font-weight: 700;
+}
+
+.debug-request pre {
+    margin: 10px 0 0;
+    overflow-x: auto;
+    font-family: Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+}
+
 .clause-errors p {
     margin-bottom: 4px;
 }

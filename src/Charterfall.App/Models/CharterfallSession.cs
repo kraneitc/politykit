@@ -41,6 +41,24 @@ public sealed class CharterfallSession
 
     public List<string> AuthoritativeRunIds { get; } = [];
 
+    public string? CurrentRunId { get; set; }
+
+    public CreateRunInput? PendingRunRequest { get; set; }
+
+    public string PendingRunRequestJson { get; set; } = string.Empty;
+
+    public CreateRunInput? LastSubmittedRunRequest { get; set; }
+
+    public string LastSubmittedRunRequestJson { get; set; } = string.Empty;
+
+    public DateTimeOffset? LastRunCreatedAt { get; set; }
+
+    public string LastResolvedScenarioName { get; set; } = string.Empty;
+
+    public string? LastRunError { get; set; }
+
+    public bool IsResolvingRun { get; set; }
+
     public string? SelectedContinuationRunId { get; set; }
 
     public string CompactInquirySummary { get; set; } = string.Empty;

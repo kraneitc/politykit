@@ -4,5 +4,5 @@ namespace Charterfall.App.Services;
 
 public interface IPolityKitRunClient
 {
-    Task<PrototypeRunRecord> CreatePlaceholderRunAsync(string label, CrisisCard crisis, CancellationToken cancellationToken = default);
+    Task<CreateRunResult> CreateRunAsync(CreateRunInput input, CancellationToken cancellationToken = default);
 }

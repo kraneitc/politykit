@@ -31,9 +31,16 @@ public sealed class SessionStoreTests
     {
         var store = new InMemoryCharterfallSessionStore();
         var content = new PrototypeContentProvider().GetInitialContent();
-        var client = new PlaceholderPolityKitRunClient();
+        await Task.CompletedTask;
 
-        var run = await client.CreatePlaceholderRunAsync("Original", content.Crisis);
+        var run = new Charterfall.App.Models.PrototypeRunRecord(
+            "pending-original-run",
+            "Original",
+            content.Crisis.PolityKitScenario,
+            content.Crisis.Seed,
+            content.Crisis.Ticks,
+            IsAuthoritative: false,
+            "Integration pending");
         store.Current.RunHistory.Add(run);
 
         Assert.Single(store.Current.RunHistory);
@@ -97,5 +104,65 @@ public sealed class SessionStoreTests
         Assert.Contains("allocation.need_based", store.Current.SelectedClauseIds);
         Assert.Contains("need-based-allocation", store.Current.AuthoritativeModelIds);
         Assert.Empty(store.Current.ClauseSelectionErrors);
+    }
+
+    [Fact]
+    public void CompleteRunResolution_PersistsSuccessfulRunIdAndRequest()
+    {
+        var store = new InMemoryCharterfallSessionStore();
+        var request = new Charterfall.App.Models.CreateRunInput(
+            "village-food-crisis",
+            12345,
+            120,
+            ["need-based-allocation"],
+            new Dictionary<string, double> { ["needPriorityWeight"] = 1.0 });
+        var runId = Guid.NewGuid();
+        var result = Charterfall.App.Models.CreateRunResult.Success(
+            runId,
+            DateTimeOffset.Parse("2026-06-17T10:00:00+00:00"),
+            "Village Food Crisis",
+            12345,
+            120,
+            ["Need-Based Allocation"],
+            "{\"scenario\":\"village-food-crisis\"}");
+        var runRecord = new Charterfall.App.Models.PrototypeRunRecord(
+            runId.ToString(),
+            "Original",
+            "Village Food Crisis",
+            12345,
+            120,
+            IsAuthoritative: true,
+            "Created by PolityKit");
+
+        store.BeginRunResolution(request, result.RawRequest);
+        store.CompleteRunResolution(request, result, runRecord);
+
+        Assert.Equal(runId.ToString(), store.Current.CurrentRunId);
+        Assert.Contains(runId.ToString(), store.Current.AuthoritativeRunIds);
+        Assert.Single(store.Current.RunHistory);
+        Assert.Equal(request, store.Current.LastSubmittedRunRequest);
+        Assert.False(store.Current.IsResolvingRun);
+        Assert.Null(store.Current.LastRunError);
+    }
+
+    [Fact]
+    public void FailRunResolution_KeepsSelectedClausesForRetry()
+    {
+        var store = new InMemoryCharterfallSessionStore();
+        var before = store.Current.SelectedClauseIds.ToArray();
+        var request = new Charterfall.App.Models.CreateRunInput(
+            "village-food-crisis",
+            12345,
+            120,
+            ["need-based-allocation"],
+            new Dictionary<string, double>());
+
+        store.FailRunResolution(request, "{}", "PolityKit API is unavailable.");
+
+        Assert.Equal(before, store.Current.SelectedClauseIds);
+        Assert.Empty(store.Current.AuthoritativeRunIds);
+        Assert.Empty(store.Current.RunHistory);
+        Assert.Equal("PolityKit API is unavailable.", store.Current.LastRunError);
+        Assert.False(store.Current.IsResolvingRun);
     }
 }
