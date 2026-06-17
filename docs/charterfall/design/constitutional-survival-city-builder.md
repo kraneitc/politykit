@@ -56,3 +56,17 @@ This brief describes the long-term product direction, not the full feature set o
 - **Constitutional Survival City Builder** is the north-star game: spatial settlement management plus institutional design. It includes the visible city, persistent citizens, districts, infrastructure, resources, crises, public inquiries, charter revision, and eventually counterfactual timeline branching.
 - **Charterfall** is the first vertical slice: a compact roguelike settlement governance prototype that proves the institutional loop before full city-building systems are added. It can use abstract settlement state, cards, clauses, metrics, events, citizen story cards, reruns, and comparisons to test whether drafting institutions and inspecting consequences is fun.
 - **PolityKit** is the reusable simulation framework underneath both. It should provide deterministic runs, scenarios, models, metrics, events, comparisons, stress tools, and structured outputs that the game layer can present, but it should not own Charterfall's fiction, progression, UI, campaign structure, citizen biographies, or commercial product identity.
+
+## 6. Responsibility Boundaries
+
+PolityKit should stay responsible for deterministic simulation facts. The game layer should stay responsible for turning those facts into play, presentation, fiction, and product-specific meaning.
+
+| Area | PolityKit responsibility | Game-layer responsibility |
+|---|---|---|
+| Simulation | Deterministic runs, seeds, models, metrics, events | Present outcomes as playable feedback |
+| Institutions | Model and preset behavior, parameters, manifests | Clause UI, unlocks, wording, player choices |
+| Scenarios | Scenario inputs, shocks, validation | Campaign framing, crisis order, tutorial context |
+| Results | Dashboard, metrics, events, comparisons | Public inquiry screen, narrative reactions, outcome badges |
+| Citizens | Structured citizen, household, group, or district outcomes when needed | Biographies, testimony, story cards, life-history presentation |
+| Timeline branching | Stored configurations, deterministic reruns, comparison inputs | Checkpoints, branch ancestry, player-facing counterfactual UI |
+| AI | Optional advisory artifacts only | Do not treat AI text as authoritative simulation data |
