@@ -7,12 +7,12 @@
 <section class="prototype-shell">
     <header class="shell-header">
         <div>
-            <p class="eyebrow">Chapter @Session.ChapterNumber / @Content.Crisis.Name</p>
+            <p class="eyebrow">Chapter @ActiveCrisis.ChapterNumber of @CampaignCrises.Count / @ActiveCrisis.DisplayName</p>
             <h1>@StageTitle</h1>
             <p>@StageSummary</p>
         </div>
         <div class="run-state">
-            <span>@Content.Crisis.IntegrationStatus</span>
+            <span>@ActiveCrisis.IntegrationStatus</span>
             <strong>@(Session.IsBusy ? "Resolving" : "Ready")</strong>
         </div>
     </header>
@@ -21,7 +21,7 @@
         <main class="state-panel" aria-live="polite">
             <div class="panel-heading">
                 <span>@Content.Settlement.Name</span>
-                <strong>@Content.Crisis.Name</strong>
+                <strong>@ActiveCrisis.DisplayName</strong>
             </div>
 
             @switch (Stage)
@@ -30,6 +30,37 @@
                     <section>
                         <h2>Draft civic response</h2>
                         <p>@Content.Settlement.Premise</p>
+                        <div class="active-crisis">
+                            <span>Active crisis</span>
+                            <strong>Chapter @ActiveCrisis.ChapterNumber: @ActiveCrisis.DisplayName</strong>
+                            <p>@ActiveCrisis.Summary</p>
+                            <small>This crisis will be tested under the listed scenario, seed, and tick assumptions.</small>
+                        </div>
+                        <div class="scenario-list">
+                            @if (CampaignCrises.Count == 0)
+                            {
+                                <p class="empty-state">No crisis cards are configured for this campaign.</p>
+                            }
+                            else
+                            {
+                                @foreach (var crisis in CampaignCrises)
+                                {
+                                    var isActive = crisis.Id == Session.ActiveCrisisId;
+                                    <button type="button"
+                                            class="scenario-card @(isActive ? "active" : string.Empty)"
+                                            disabled="@(!crisis.IsUnlocked)"
+                                            @onclick="() => SelectCrisis(crisis)">
+                                        <span>Chapter @crisis.ChapterNumber</span>
+                                        <strong>@crisis.DisplayName</strong>
+                                        <small>@crisis.DesignPurpose</small>
+                                        <em>@crisis.PolityKitScenario</em>
+                                        <small>Seed @crisis.Seed, @crisis.Ticks ticks</small>
+                                        <small>@string.Join(", ", crisis.StressedClauseDimensions)</small>
+                                        <b>@(crisis.IsUnlocked ? crisis.IntegrationStatus : "Locked until campaign advances")</b>
+                                    </button>
+                                }
+                            }
+                        </div>
                         <div class="clause-list">
                             @foreach (var clause in Content.Clauses)
                             {
@@ -62,7 +93,7 @@
                 case CharterfallStage.Amendment:
                     <section>
                         <h2>Amend charter</h2>
-                        <p>Adjust the selected clause set after inquiry. This prototype keeps the same Greywater crisis assumptions visible for a later same-seed rerun.</p>
+                        <p>Adjust the selected clause set after inquiry. This prototype keeps the same @ActiveCrisis.DisplayName assumptions visible for a later same-seed rerun.</p>
                         <div class="draft-summary">
                             <span>Selected clauses</span>
                             <strong>@SelectedClauseSummary</strong>
@@ -111,11 +142,16 @@
                 <h2>Assumptions</h2>
                 <dl>
                     <div><dt>Settlement</dt><dd>@Content.Settlement.Name</dd></div>
-                    <div><dt>Scenario</dt><dd>@Content.Crisis.ScenarioId</dd></div>
-                    <div><dt>Seed</dt><dd>@Content.Crisis.Seed</dd></div>
-                    <div><dt>Ticks</dt><dd>@Content.Crisis.Ticks</dd></div>
-                    <div><dt>Model preset</dt><dd>@Content.Crisis.ModelPreset</dd></div>
+                    <div><dt>Crisis</dt><dd>@ActiveCrisis.DisplayName</dd></div>
+                    <div><dt>Scenario</dt><dd>@ActiveCrisis.PolityKitScenario</dd></div>
+                    <div><dt>Seed</dt><dd>@ActiveCrisis.Seed</dd></div>
+                    <div><dt>Ticks</dt><dd>@ActiveCrisis.Ticks</dd></div>
+                    <div><dt>Chapter</dt><dd>@ActiveCrisis.ChapterNumber of @CampaignCrises.Count</dd></div>
                 </dl>
+                @if (!ActiveCrisis.IsIntegrationAvailable)
+                {
+                    <p class="empty-state">Integration pending: this crisis card is available for campaign planning, but run creation is not wired for this scenario yet.</p>
+                }
                 <p class="boundary">@Content.ClaimsBoundary</p>
             </section>
 
@@ -164,6 +200,12 @@
 
     private PrototypeContent Content => ContentProvider.GetInitialContent();
 
+    private IReadOnlyList<CrisisCard> CampaignCrises => ContentProvider.GetCampaignCrises();
+
+    private CrisisCard ActiveCrisis =>
+        ContentProvider.FindCrisis(Session.ActiveCrisisId)
+        ?? ContentProvider.GetActiveCrisis(Session.ChapterNumber);
+
     private string StageTitle => Stage switch
     {
         CharterfallStage.Draft => "Draft",
@@ -176,7 +218,7 @@
 
     private string StageSummary => Stage switch
     {
-        CharterfallStage.Draft => "Choose the first charter posture for Greywater Compact before resolving the failed harvest.",
+        CharterfallStage.Draft => $"Choose the first charter posture for Greywater Compact before resolving {ActiveCrisis.DisplayName}.",
         CharterfallStage.Inquiry => "Review where dashboard metrics, event timelines, and bounded conclusions will appear.",
         CharterfallStage.Amendment => "Prepare a same-seed charter adjustment after the inquiry.",
         CharterfallStage.Comparison => "Compare original and amended records while keeping placeholder state explicit.",
@@ -229,6 +271,33 @@
         {
             SessionStore.SetError(Messages.MissingAmendedRunForComparison());
         }
+
+        if (ContentProvider.FindCrisis(Session.ActiveCrisisId) is null)
+        {
+            SessionStore.SetError($"The active chapter has no matching Charterfall crisis card: {Session.ActiveCrisisId}.");
+        }
+    }
+
+    private void SelectCrisis(CrisisCard crisis)
+    {
+        if (!crisis.IsUnlocked)
+        {
+            SessionStore.SetError($"{crisis.DisplayName} is locked until the campaign advances to chapter {crisis.ChapterNumber}.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(crisis.PolityKitScenario))
+        {
+            SessionStore.SetError($"{crisis.DisplayName} has no PolityKit scenario source configured.");
+            return;
+        }
+
+        SessionStore.SelectCrisis(crisis);
+
+        if (!crisis.IsIntegrationAvailable)
+        {
+            SessionStore.SetError($"{crisis.DisplayName} is part of the campaign, but its PolityKit scenario source is not executable through the current prototype path yet.");
+        }
     }
 
     private void ToggleClause(string clauseId)
@@ -270,7 +339,7 @@
     private async Task AddRunAsync(string label)
     {
         Session.IsBusy = true;
-        var run = await RunClient.CreatePlaceholderRunAsync(label, Content.Crisis);
+        var run = await RunClient.CreatePlaceholderRunAsync(label, ActiveCrisis);
         Session.RunHistory.RemoveAll(existing => existing.Label == label);
         Session.RunHistory.Add(run);
         Session.AuthoritativeRunIds.Remove(run.RunId);

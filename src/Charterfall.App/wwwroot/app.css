@@ -189,11 +189,81 @@ p {
 }
 
 .clause-list,
+.scenario-list,
 .metric-grid,
 .comparison-strip,
 .support-column {
     display: grid;
     gap: 12px;
+}
+
+.active-crisis {
+    margin-bottom: 14px;
+    border: 1px solid #c9ddcf;
+    border-radius: 8px;
+    background: var(--soft-green);
+    padding: 14px;
+}
+
+.active-crisis span,
+.active-crisis small {
+    display: block;
+    color: var(--muted);
+}
+
+.active-crisis p {
+    margin-bottom: 8px;
+}
+
+.scenario-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 16px;
+}
+
+.scenario-card {
+    display: grid;
+    gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+    padding: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.scenario-card.active {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 2px rgba(45, 111, 95, 0.18);
+}
+
+.scenario-card:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+.scenario-card span,
+.scenario-card small,
+.scenario-card em,
+.scenario-card b {
+    display: block;
+}
+
+.scenario-card span,
+.scenario-card small {
+    color: var(--muted);
+}
+
+.scenario-card em {
+    color: var(--accent-strong);
+    font-style: normal;
+    font-family: Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+}
+
+.scenario-card b {
+    color: var(--warning);
+    font-size: 0.82rem;
 }
 
 .clause-row {
@@ -377,6 +447,10 @@ dd {
 
     .metric-grid {
         grid-template-columns: repeat(2, minmax(130px, 1fr));
+    }
+
+    .scenario-list {
+        grid-template-columns: 1fr;
     }
 }
 

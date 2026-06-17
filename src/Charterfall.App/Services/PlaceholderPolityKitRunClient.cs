@@ -13,7 +13,7 @@ public sealed class PlaceholderPolityKitRunClient : IPolityKitRunClient
         var run = new PrototypeRunRecord(
             $"pending-{slug}-run",
             label,
-            crisis.ScenarioId,
+            crisis.PolityKitScenario,
             crisis.Seed,
             crisis.Ticks,
             IsAuthoritative: false,

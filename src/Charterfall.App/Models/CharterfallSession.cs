@@ -8,6 +8,14 @@ public sealed class CharterfallSession
 
     public string ActiveCrisisId { get; set; } = "failed-harvest";
 
+    public string ScenarioSource { get; set; } = "village-food-crisis";
+
+    public int Seed { get; set; } = 12345;
+
+    public int Ticks { get; set; } = 120;
+
+    public string AssumptionsSummary { get; set; } = "Greywater Compact / Failed Harvest / village-food-crisis / seed 12345 / 120 ticks";
+
     public List<string> SelectedClauseIds { get; } = ["allocation.need_based"];
 
     public List<string> AuthoritativeRunIds { get; } = [];

@@ -4,11 +4,16 @@ public sealed record SettlementProfile(string Id, string Name, string Premise);
 
 public sealed record CrisisCard(
     string Id,
-    string Name,
-    string ScenarioId,
+    int ChapterNumber,
+    string DisplayName,
+    string Summary,
+    string PolityKitScenario,
     int Seed,
     int Ticks,
-    string ModelPreset,
+    string DesignPurpose,
+    IReadOnlyList<string> StressedClauseDimensions,
+    bool IsUnlocked,
+    bool IsIntegrationAvailable,
     string IntegrationStatus);
 
 public sealed record CharterClause(string Id, string Name, string Description, bool IsAuthoritativeCandidate);
@@ -27,6 +32,7 @@ public sealed record PrototypeRunRecord(
 public sealed record PrototypeContent(
     SettlementProfile Settlement,
     CrisisCard Crisis,
+    IReadOnlyList<CrisisCard> CampaignCrises,
     IReadOnlyList<CharterClause> Clauses,
     IReadOnlyList<MetricPlaceholder> Metrics,
     string ClaimsBoundary);

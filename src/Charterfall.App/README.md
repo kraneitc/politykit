@@ -18,3 +18,13 @@ dotnet test PolityKit.slnx --no-build
 ```
 
 The current shell uses in-memory services and placeholder run records. Placeholder records are marked as integration pending and are not authoritative PolityKit output.
+
+## Scenario Selection
+
+The Draft view shows the fixed Milestone 1 Greywater Compact crisis order:
+
+1. Failed Harvest
+2. Fever Season
+3. Supply Office Scandal
+
+Chapter 1 is unlocked by default. Future chapters are visible as campaign cards but locked until campaign progression is wired in a later slice.

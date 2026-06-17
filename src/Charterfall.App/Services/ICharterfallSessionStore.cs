@@ -9,4 +9,6 @@ public interface ICharterfallSessionStore
     void ClearError();
 
     void SetError(string message);
+
+    void SelectCrisis(CrisisCard crisis);
 }

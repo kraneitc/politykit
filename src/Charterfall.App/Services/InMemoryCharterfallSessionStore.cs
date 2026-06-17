@@ -15,4 +15,15 @@ public sealed class InMemoryCharterfallSessionStore : ICharterfallSessionStore
     {
         Current.LastError = message;
     }
+
+    public void SelectCrisis(CrisisCard crisis)
+    {
+        Current.ChapterNumber = crisis.ChapterNumber;
+        Current.ActiveCrisisId = crisis.Id;
+        Current.ScenarioSource = crisis.PolityKitScenario;
+        Current.Seed = crisis.Seed;
+        Current.Ticks = crisis.Ticks;
+        Current.AssumptionsSummary =
+            $"Greywater Compact / {crisis.DisplayName} / {crisis.PolityKitScenario} / seed {crisis.Seed} / {crisis.Ticks} ticks";
+    }
 }
