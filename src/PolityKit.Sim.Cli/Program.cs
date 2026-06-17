@@ -37,8 +37,11 @@ internal static class Program
                 "sweep" => Sweep(args[1..]),
                 "stress" => Stress(args[1..]),
                 "summary" => Summary(args[1..]),
+                "ai-summary" => Summary(args[1..]),
                 "suggest-scenario" => SuggestScenario(args[1..]),
+                "ai-suggest-scenario" => SuggestScenario(args[1..]),
                 "critique-model" => CritiqueModel(args[1..]),
+                "ai-critique-model" => CritiqueModel(args[1..]),
                 "ai-anomalies" => AiAnomalies(args[1..]),
                 "list-models" => ListModels(),
                 _ => Fail($"Unknown command '{args[0]}'.")
@@ -153,7 +156,7 @@ internal static class Program
     {
         var bundleDirectory = ReadSummaryBundleDirectory(args);
         var providerName = ReadOption(args, "--provider") ?? DisabledAiAnalysisProvider.Name;
-        var outputPath = ReadOption(args, "--out") ?? Path.Combine(bundleDirectory, "scenario-suggestion-draft.json");
+        var outputPath = ReadOption(args, "--out") ?? Path.Combine(bundleDirectory, "ai-scenario-suggestions.json");
         var summaryPath = Path.Combine(bundleDirectory, "summary.json");
         var configPath = Path.Combine(bundleDirectory, "config.json");
 
@@ -743,10 +746,10 @@ internal static class Program
 
     private static string ReadSummaryBundleDirectory(string[] args)
     {
-        var bundleDirectory = ReadOption(args, "--bundle");
+        var bundleDirectory = ReadOption(args, "--run") ?? ReadOption(args, "--bundle");
         if (string.IsNullOrWhiteSpace(bundleDirectory))
         {
-            throw new InvalidOperationException("This command requires --bundle <directory>.");
+            throw new InvalidOperationException("This command requires --run <directory>.");
         }
 
         return Path.GetFullPath(bundleDirectory);
@@ -851,9 +854,9 @@ internal static class Program
           PolityKit.Sim.Cli run [options]
           PolityKit.Sim.Cli sweep [options]
           PolityKit.Sim.Cli stress [options]
-          PolityKit.Sim.Cli summary --bundle <directory> [--provider fake] [--out <file>]
-          PolityKit.Sim.Cli suggest-scenario --bundle <directory> [--provider fake] [--out <file>]
-          PolityKit.Sim.Cli critique-model --bundle <directory> --model <name> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli ai-summary --run <directory> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli ai-suggest-scenario --run <directory> [--provider fake] [--out <file>]
+          PolityKit.Sim.Cli ai-critique-model --run <directory> --model <name> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli ai-anomalies --stress-summary <file> [--provider fake] [--out <file>]
           PolityKit.Sim.Cli list-models
 
@@ -876,9 +879,9 @@ internal static class Program
           PolityKit.Sim.Cli run --scenario examples/village-food-crisis.json --out runs/village-food-crisis-12345
           PolityKit.Sim.Cli sweep --models need-based-allocation --sweep needPriorityWeight=0.75,1.0,1.25
           PolityKit.Sim.Cli stress --scenario village-food-crisis --seed 111,222 --models need-based-allocation,market-based-allocation --sweep needPriorityWeight=0.75,1.0
-          PolityKit.Sim.Cli summary --bundle runs/village-food-crisis-12345 --provider fake
-          PolityKit.Sim.Cli suggest-scenario --bundle runs/village-food-crisis-12345 --provider fake
-          PolityKit.Sim.Cli critique-model --bundle runs/village-food-crisis-12345 --model need-based-allocation --provider fake
+          PolityKit.Sim.Cli ai-summary --run runs/village-food-crisis-12345 --provider fake
+          PolityKit.Sim.Cli ai-suggest-scenario --run runs/village-food-crisis-12345 --provider fake
+          PolityKit.Sim.Cli ai-critique-model --run runs/village-food-crisis-12345 --model need-based-allocation --provider fake
           PolityKit.Sim.Cli ai-anomalies --stress-summary runs/food-crisis-stress/stress-summary.json --provider fake
         """);
     }

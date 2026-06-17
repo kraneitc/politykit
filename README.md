@@ -277,8 +277,9 @@ After a run, inspect:
 
 - `summary.json` for final per-model metrics, event counts, and notable metric changes with breadcrumb text and nearby events.
 - `ai-analysis.json` for whether advisory AI analysis was used. Default simulation runs record `used: false`.
-- `ai-summary.json` after running the optional `summary` command for an advisory generated interpretation of the run.
-- `ai-model-critique.json` after running the optional `critique-model` command for advisory model critique fields.
+- `ai-summary.json` after running the optional `ai-summary` command for an advisory generated interpretation of the run.
+- `ai-scenario-suggestions.json` after running the optional `ai-suggest-scenario` command for a validated scenario suggestion draft.
+- `ai-model-critique.json` after running the optional `ai-critique-model` command for advisory model critique fields.
 - `ai-anomalies.json` after running the optional `ai-anomalies` command against a stress summary.
 - `metrics.csv` for metric values by tick.
 - `events.jsonl` for the event stream, including model, resource, count, backlog, severity, and trust-delta context where available.
@@ -288,28 +289,30 @@ After a run, inspect:
 Generate an advisory AI summary artifact from a completed local run bundle using the built-in fake provider:
 
 ```bash
-dotnet run --project src/PolityKit.Sim.Cli -- summary \
-  --bundle runs/village-food-crisis-12345 \
+dotnet run --project src/PolityKit.Sim.Cli -- ai-summary \
+  --run runs/village-food-crisis-12345 \
   --provider fake
 ```
 
 The fake provider is local and deterministic. It creates `ai-summary.json` with provenance and boundary metadata, but the generated text is advisory interpretation, not simulation data.
 
+The earlier `summary`, `suggest-scenario`, and `critique-model` command names, plus `--bundle`, remain available as compatibility aliases; new local workflows should prefer the `ai-* --run` form.
+
 Generate a validated scenario suggestion draft from the same completed bundle:
 
 ```bash
-dotnet run --project src/PolityKit.Sim.Cli -- suggest-scenario \
-  --bundle runs/village-food-crisis-12345 \
+dotnet run --project src/PolityKit.Sim.Cli -- ai-suggest-scenario \
+  --run runs/village-food-crisis-12345 \
   --provider fake
 ```
 
-This writes `scenario-suggestion-draft.json` only when the provider returned a draft and the existing scenario validator accepts it. The draft remains a proposed artifact for review, not an automatically accepted scenario file.
+This writes `ai-scenario-suggestions.json` only when the provider returned a draft and the existing scenario validator accepts it. The draft remains a proposed artifact for review, not an automatically accepted scenario file.
 
 Generate an advisory model critique from the same completed bundle:
 
 ```bash
-dotnet run --project src/PolityKit.Sim.Cli -- critique-model \
-  --bundle runs/village-food-crisis-12345 \
+dotnet run --project src/PolityKit.Sim.Cli -- ai-critique-model \
+  --run runs/village-food-crisis-12345 \
   --model regulated-market \
   --provider fake
 ```
