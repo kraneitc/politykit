@@ -4,6 +4,8 @@
 
 The Constitutional Survival City Builder is a long-term settlement management game about keeping a fragile community alive by designing the institutions that govern it. The player manages food, shelter, labor, legitimacy, infrastructure, and ecological pressure, but their most important tools are the civic rules that decide how scarce resources are allocated, who has authority during emergencies, how decisions can be challenged, and how the settlement learns after harm or failure. Crises do not only test whether there is enough supply; they reveal whether the community's charter protects the vulnerable, excludes people from help, delays urgent action, overloads local systems, or adapts under pressure.
 
+The setting should give the settlement enough isolation for local governance to matter. A good default is an intermittently cut-off basin, island, valley, frontier refuge, or other fictional place where outside help exists but arrives late, partially, or with strings attached. This supports suspension of disbelief without requiring a sealed apocalypse: the wider world can still send traders, refugees, diseases, inspectors, supply missions, and political pressure into the settlement.
+
 ## 2. Core Fantasy
 
 The player is the constitutional architect of a fragile settlement. They build and steward the community through visible needs like housing, food, work, infrastructure, and public trust, but the deeper fantasy is not direct control over every citizen or resource. It is the power to draft, test, and revise the civic machinery that decides how the settlement acts when pressure arrives.
@@ -70,7 +72,7 @@ These pressures should not function as a simple morality meter. They should help
 This brief describes the long-term product direction, not the full feature set of the first playable slice. The project should keep three related scopes distinct:
 
 - **Constitutional Survival City Builder** is the north-star game: spatial settlement management plus institutional design. It includes the visible city, persistent citizens, districts, infrastructure, resources, crises, public inquiries, charter revision, and eventually counterfactual timeline branching.
-- **Charterfall** is the first vertical slice: a compact roguelike settlement governance prototype that proves the institutional loop before full city-building systems are added. It can use abstract settlement state, cards, clauses, metrics, events, citizen story cards, reruns, and comparisons to test whether drafting institutions and inspecting consequences is fun.
+- **Charterfall** is the first vertical slice: a compact roguelike settlement governance prototype that proves the institutional loop before full city-building systems are added. It can use an intermittently isolated settlement, abstract settlement state, cards, clauses, metrics, events, citizen story cards, reruns, and comparisons to test whether drafting institutions and inspecting consequences is fun.
 - **PolityKit** is the reusable simulation framework underneath both. It should provide deterministic runs, scenarios, models, metrics, events, comparisons, stress tools, and structured outputs that the game layer can present, but it should not own Charterfall's fiction, progression, UI, campaign structure, citizen biographies, or commercial product identity.
 
 ## 6. Responsibility Boundaries

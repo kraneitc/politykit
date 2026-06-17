@@ -6,7 +6,7 @@
 
 **Player role:** founder, steward, and charter drafter for a fragile fictional settlement.
 
-Charterfall is the first playable vertical slice for the Constitutional Survival City Builder. Each run asks the player to draft a civic charter, survive three linked crises, inspect what happened, amend the rules, compare the outcome, and continue. The prototype uses an abstract settlement rather than full spatial construction so it can focus on the central question: is it fun to make institutions playable, watch them protect or fail people under stress, and revise them from evidence?
+Charterfall is the first playable vertical slice for the Constitutional Survival City Builder. Each run asks the player to draft a civic charter for an intermittently isolated settlement, survive three linked crises, inspect what happened, amend the rules, compare the outcome, and continue. The prototype uses an abstract settlement rather than full spatial construction so it can focus on the central question: is it fun to make institutions playable, watch them protect or fail people under stress, and revise them from evidence?
 
 ## Session Structure
 
@@ -50,6 +50,7 @@ Charterfall should feel compact, legible, replayable, and consequence-focused. T
 ## Minimum First-Run Content
 
 - One fictional settlement profile.
+- Intermittent-isolation premise that explains why local rules matter.
 - Three linked crisis scenarios.
 - Three to five charter dimensions.
 - Five displayed inquiry metrics.
