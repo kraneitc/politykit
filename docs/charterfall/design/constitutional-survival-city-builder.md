@@ -48,3 +48,11 @@ In the north-star game, "try again" can eventually include counterfactual timeli
 
 5. **Revision over optimization**
    Failure should be informative. The game should reward learning, amendment, reruns, stress tests, comparison, and eventually counterfactual timeline branches rather than a single universal best answer. The player is not solving politics once; they are studying how a declared institutional design behaves under declared assumptions.
+
+## 5. Scope Distinction
+
+This brief describes the long-term product direction, not the full feature set of the first playable slice. The project should keep three related scopes distinct:
+
+- **Constitutional Survival City Builder** is the north-star game: spatial settlement management plus institutional design. It includes the visible city, persistent citizens, districts, infrastructure, resources, crises, public inquiries, charter revision, and eventually counterfactual timeline branching.
+- **Charterfall** is the first vertical slice: a compact roguelike settlement governance prototype that proves the institutional loop before full city-building systems are added. It can use abstract settlement state, cards, clauses, metrics, events, citizen story cards, reruns, and comparisons to test whether drafting institutions and inspecting consequences is fun.
+- **PolityKit** is the reusable simulation framework underneath both. It should provide deterministic runs, scenarios, models, metrics, events, comparisons, stress tools, and structured outputs that the game layer can present, but it should not own Charterfall's fiction, progression, UI, campaign structure, citizen biographies, or commercial product identity.
