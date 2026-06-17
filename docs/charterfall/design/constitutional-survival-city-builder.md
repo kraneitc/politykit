@@ -88,3 +88,11 @@ Milestone 1 should prove the institutional loop before it tries to become the fu
 - Arbitrary rewind or tick-by-tick timeline branching.
 
 Citizen stories in the first slice can be lightweight story cards grounded in run outputs. Timeline comparison can start with same-seed reruns or clearly defined decision points. The deeper versions, including persistent citizen histories and broad counterfactual branching, belong to later milestones after the core loop is playable.
+
+## 8. Claims Boundary
+
+```text
+Charterfall shows how fictional institutional rules behave inside declared simulation assumptions. It does not prove that a real-world political, economic, or social system is superior.
+```
+
+The long-term city builder should use fictional settlements, fictional factions, inspectable assumptions, and comparison language such as "under these assumptions." Human stories, citizen testimony, public inquiries, reruns, stress tests, and counterfactual branches should all inherit this boundary: they can help the player understand how the simulated settlement behaved, but they should not present simulation output as real-world proof.
