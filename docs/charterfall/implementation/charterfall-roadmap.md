@@ -47,10 +47,10 @@ You are not simply the mayor. You are the founder, steward, or constitutional ar
    Seasons, disasters, shortages, corruption events, migration, housing loss, public health needs, and supply breakdowns test the system.
 
 4. **Inspectable consequences**
-   Outcomes are presented through metrics, event timelines, citizen stories, district changes, public inquiries, and comparison reports.
+   Outcomes are presented through metrics, event timelines, citizen stories, district changes, public inquiries, and comparison reports. Citizen inspection should connect personal life stories to the rules, events, and bottlenecks that shaped them.
 
 5. **Revision over optimization**
-   Failure is part of play. The player learns by changing assumptions, rerunning from the same seed, stress-testing variants, and comparing outcomes.
+   Failure is part of play. The player learns by changing assumptions, rerunning from the same seed, stress-testing variants, branching from earlier decision points, and comparing outcomes.
 
 ### PolityKit Role
 
@@ -61,6 +61,7 @@ PolityKit should provide:
 - Governance models and presets.
 - Metrics such as needs met, inequality, trust, severe failures, and administrative load.
 - Event streams for explaining what happened.
+- Structured citizen, household, or group outcomes when the game needs personal story surfaces.
 - Reruns from stored configurations.
 - Comparisons between runs.
 - Parameter sweeps for tuning.
@@ -71,12 +72,14 @@ The game layer should provide:
 
 - City map and spatial state.
 - Citizen and faction presentation.
+- Citizen story cards and inspectable life histories.
 - Player controls and UI.
 - Narrative events.
 - Progression and unlocks.
 - Visual feedback.
 - Save games.
 - Scenario campaign structure.
+- Counterfactual timeline branching from stored decision points.
 - Translation between game rules and PolityKit model/scenario inputs.
 
 ## Vertical Slice: Charterfall
@@ -209,6 +212,8 @@ Goal: make the abstract simulation feel like a game.
 Deliverables:
 
 - Citizen and faction reaction snippets.
+- Citizen story cards grounded in run outputs.
+- Inspectable household or citizen summaries for selected crisis outcomes.
 - Crisis cards.
 - Clause cards with clear tradeoffs.
 - Public inquiry screen after each crisis.
@@ -219,6 +224,7 @@ Deliverables:
 Acceptance:
 
 - A new player understands why a run succeeded or failed.
+- A player can inspect at least one citizen or household story and trace it back to simulation events.
 - The UI invites experimentation rather than punishing failure.
 - The player can distinguish metrics, events, and narrative interpretation.
 
@@ -232,6 +238,7 @@ Deliverables:
 - Unlockable institutional mechanisms.
 - Multi-crisis consequences carried between chapters.
 - Faction pressure and legitimacy effects.
+- Counterfactual branch design for restarting from selected inquiry or amendment points.
 - Stress test mode.
 - Sensitivity report view.
 - Challenge scenarios with scoring constraints.
@@ -240,6 +247,7 @@ Acceptance:
 
 - Different charter builds produce meaningfully different outcomes.
 - The same charter can perform well in one crisis and poorly in another.
+- Counterfactual branches are scoped to clear decision points rather than arbitrary save-state rewinds.
 - Stress and sensitivity outputs create useful player decisions, not just reports.
 
 ### Milestone 4: City Builder Foundation
@@ -286,6 +294,29 @@ Acceptance:
 
 ## Future Extensions
 
+### Counterfactual Timeline Branching
+
+Let players return to a prior point in a completed or ongoing timeline, change a charter clause, amendment, or declared scenario condition, and simulate forward to see what would have happened. Branches should compare against the original timeline through metrics, event timelines, harms, bottlenecks, citizen reactions, and public inquiry summaries.
+
+Value:
+
+- Turns failure into an inspectable design space.
+- Makes "what if we had governed differently?" a first-class play action.
+- Supports same-seed experimentation beyond restarting from the initial scenario.
+- Gives the long-term city builder a distinctive institutional time-study fantasy.
+
+Risks:
+
+- Can balloon into full arbitrary save-state rewind if not constrained.
+- Needs clear UI for timeline ancestry, branch comparison, and player intent.
+- Requires careful language so counterfactual outcomes remain assumption-bound.
+
+Initial scope:
+
+- Not required for Milestone 1.
+- Prefer branching at crisis boundaries, inquiry screens, amendment windows, or authored checkpoint events.
+- Avoid promising tick-by-tick rewind until save-state, campaign state, and comparison tooling are mature.
+
 ### Narrative Political RPG Layer
 
 Add named advisors, faction leaders, organizers, administrators, and citizens. PolityKit outcomes drive character reactions, trust, demands, resignations, protests, and alliances.
@@ -295,6 +326,10 @@ Value:
 - Makes systemic outcomes emotionally legible.
 - Turns abstract tradeoffs into memorable stories.
 - Supports campaign writing and replayable event chains.
+
+Boundary:
+
+- Personal stories should stay grounded in deterministic outcomes, even when presentation text is authored or assisted.
 
 ### Multiplayer Ideology Lab
 
@@ -410,9 +445,11 @@ The game will likely need its own project or app layer for:
 - Player profile and campaign progress.
 - Charter definitions.
 - Clause unlocks.
+- Timeline branch metadata and comparison history.
 - Game-specific scenario packs.
 - Presentation text.
 - Narrative events.
+- Citizen biographies, testimony, and life-history presentation.
 - City/district state.
 - Save files.
 - UI state.
@@ -422,9 +459,11 @@ The game will likely need its own project or app layer for:
 - First-class charter or institution composition contracts.
 - Scenario tags and difficulty metadata.
 - More granular citizen group and district outputs.
+- Structured citizen or household case files for story cards.
 - Collapse and recovery explanations formatted for gameplay.
 - Stable event categories for UI filtering.
 - Run annotations for game campaign context.
+- Checkpoint or branch contracts for rerunning from declared decision points.
 - Batch comparison endpoints tuned for challenge screens.
 
 ## Open Questions
