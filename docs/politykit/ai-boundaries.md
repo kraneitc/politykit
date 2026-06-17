@@ -9,6 +9,7 @@ PolityKit simulations must remain runnable, reproducible, and interpretable with
 - Simulation data comes from deterministic run, sweep, stress, comparison, metric, event, and summary outputs.
 - AI features must not change model decisions, world rules, metric calculations, seeds, scenarios, or stored run results.
 - AI provenance must be recorded beside AI-assisted artifacts so readers can see what inputs were read and which provider/model generated the text.
+- AI-assisted artifacts are generated interpretations of recorded simulation artifacts. They are not predictions, validation evidence, policy recommendations, or proof that a model is correct.
 
 ## Provenance Shape
 
@@ -83,6 +84,8 @@ Default options keep AI disabled. Disabled mode returns an advisory artifact wit
 
 The built-in `fake` provider is local and deterministic for examples and tests. It can generate advisory run-summary artifacts, scenario suggestion drafts, model critiques, and batch anomaly reports without sending run data outside the process.
 
+Run summaries are generated interpretations of completed run summaries, final metrics, notable metric changes, selected event context, and model assumptions. They should help a reader inspect what happened in a recorded run, but they do not create new metrics, validate the model, or claim real-world predictive validity.
+
 Scenario suggestions are drafts. They must pass existing scenario validation before they can be written as draft artifacts, and they do not alter scenario files, run results, model behavior, or scenario validation rules.
 
 Model critiques are prompts for human review. They can identify assumption risks, observed failure modes, suggested tests, and suggested documentation updates from manifests, governance dimensions, deterministic metrics, collapse events, and robustness summaries. They are not proof that a model is correct or incorrect, and they must not rewrite model code.
@@ -90,3 +93,15 @@ Model critiques are prompts for human review. They can identify assumption risks
 Batch anomaly reports are prompts for human review across stress summaries. They operate on final metrics, sensitivity reports, collapse events, and `modelRobustness`, not raw hidden state. Structured anomaly candidates must reference only source run IDs, models, scenarios, seeds, and metrics that were present in the deterministic context; invented references are flagged in artifact validation.
 
 When AI is enabled, callers select a provider implementation outside the deterministic simulation path. The shared service applies a timeout, bounds prompt input size, bounds generated text size, preserves external cancellation, and turns provider failures or service timeouts into deterministic failed artifacts. This layer does not log prompt contents.
+
+## Known Limitations
+
+AI-assisted output can still be wrong even when the deterministic simulation output is correct.
+
+- Hallucinations: Generated text may invent causal explanations, missing context, or conclusions that are not present in the source artifact.
+- Provider drift: A provider or model version can change its wording or judgment across time, even for the same prompt and simulation files.
+- Prompt sensitivity: Small changes in context builders, prompt template versions, input ordering, or omitted fields can shift the generated interpretation.
+- Privacy: External providers may receive scenario names, model names, model versions, seeds, parameters, metric values, event summaries, and citizen-state exports. Treat those payloads as data shared outside the local process.
+- Non-authoritative interpretation: AI artifacts are not simulation data, empirical evidence, governance advice, legal advice, policy recommendations, or real-world forecasts.
+
+When an AI artifact is useful, cite the deterministic source files or run IDs beside it. Prefer claims that can be checked against `summary.json`, `metrics.csv`, `events.jsonl`, `stress-summary.json`, API run responses, or other recorded simulation outputs.

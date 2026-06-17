@@ -30,14 +30,14 @@ PolityKit includes:
 - A golden interpreted run bundle under `examples/golden-interpreted-run`.
 - A CLI runner that writes run bundles to disk.
 - An ASP.NET Core API for listing models, metrics, scenarios, creating/querying persisted simulation runs, and retrieving dashboard-ready run data.
+- Optional fake-provider AI-assisted exploration commands and API endpoints for run summaries, scenario suggestions, model critique, and stress anomaly review.
 - Documented AI boundaries that keep AI analysis optional, advisory, and separate from authoritative simulation data.
 - Automated unit and integration tests for the simulation libraries and API.
 
 Still early / not built yet:
 
-- A richer CLI command surface beyond running simulations and listing models.
 - Frontend dashboards or visualization tools.
-- AI provider integrations or generated advisory summaries.
+- Production AI provider integrations beyond the local fake provider.
 - Real-world calibration or policy-grade validation. The models remain intentionally simplified.
 
 ## Repository Layout
@@ -385,6 +385,27 @@ dotnet run --project src/PolityKit.Sim.Cli -- ai-anomalies \
 
 This writes `ai-anomalies.json` with structured anomaly candidates for model, scenario, seed, metric, observed value, and explanation. The artifact flags provider output that references run IDs, models, scenarios, seeds, or metrics that were not present in the source stress summary.
 
+### Optional AI-Assisted Exploration
+
+AI-assisted workflows are optional tools for reading recorded simulation artifacts. They generate interpretations, critiques, draft scenarios, and anomaly candidates from existing `summary.json`, `config.json`, and `stress-summary.json` files. They do not run the simulation engine, alter model behavior, change metric calculations, rewrite scenario validation, change seeds, or modify completed run results.
+
+Treat every AI artifact as advisory review material:
+
+- `ai-summary.json` is generated interpretation of a completed run bundle.
+- `ai-scenario-suggestions.json` is a proposed draft that must pass normal scenario validation before use.
+- `ai-model-critique.json` is a review prompt about assumptions, observed failure modes, suggested tests, and documentation gaps.
+- `ai-anomalies.json` is a set of anomaly candidates to compare against deterministic stress outputs.
+
+Known limitations:
+
+- Generated text can hallucinate, omit important caveats, or overstate patterns in the deterministic output.
+- Provider behavior can drift across model versions, even when PolityKit inputs stay the same.
+- Prompt wording and context selection can change what the provider emphasizes.
+- External providers may receive scenario names, model names, seeds, parameters, metrics, event summaries, and other run data.
+- AI output is not evidence that a model is correct, robust, predictive, fair, or policy-ready.
+
+Always inspect the deterministic source files and provenance before using an AI-assisted artifact in analysis, documentation, or follow-up experiments.
+
 ### Use the API
 
 Start the API:
@@ -564,6 +585,60 @@ API run, sweep, stress, and comparison responses include `aiAnalysis`. By defaul
 The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
 
 For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai/summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/ai/scenario-suggestions` to generate a validated scenario suggestion draft, `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique, or `POST /api/runs/stress/ai/anomalies` with a stress request body to generate advisory anomaly candidates from the resulting stress summary. The older `POST /api/runs/{id}/ai-summary` and `POST /api/runs/{id}/scenario-suggestions` aliases remain available for compatibility.
+
+Disabled mode example:
+
+```powershell
+$run = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:5020/api/runs `
+  -ContentType "application/json" `
+  -Body (@{
+    scenario = "village-food-crisis"
+    ticks = 5
+    models = @("need-based-allocation")
+  } | ConvertTo-Json -Depth 6)
+
+try {
+  Invoke-RestMethod `
+    -Method Post `
+    -Uri "http://localhost:5020/api/runs/$($run.id)/ai/summary"
+} catch {
+  $_.ErrorDetails.Message
+}
+```
+
+With default configuration this returns a `ProblemDetails` response with status `503`, title `AI analysis is disabled.`, and detail `AI analysis is not configured.`
+
+Configured fake-provider example:
+
+Start the API with the local fake provider:
+
+```powershell
+$env:AiAnalysis__Enabled = "true"
+$env:AiAnalysis__ProviderName = "fake"
+dotnet run --project src/PolityKit.Sim.Api
+```
+
+Then create or reuse a stored run and request an advisory summary:
+
+```powershell
+$run = Invoke-RestMethod `
+  -Method Post `
+  -Uri http://localhost:5020/api/runs `
+  -ContentType "application/json" `
+  -Body (@{
+    scenario = "village-food-crisis"
+    ticks = 5
+    models = @("need-based-allocation")
+  } | ConvertTo-Json -Depth 6)
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:5020/api/runs/$($run.id)/ai/summary"
+```
+
+The fake-provider response is an advisory artifact with `aiAnalysis.used: true`, source run/scenario/model/seed provenance, provider metadata, and generated interpretation text. It does not change the stored run or any deterministic endpoint response.
 
 See [AI boundaries and safety](docs/politykit/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
