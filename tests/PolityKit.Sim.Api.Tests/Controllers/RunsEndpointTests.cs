@@ -754,7 +754,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
             }
         });
 
-        var response = await client.PostAsync($"/api/runs/{run.Id}/ai-summary", null);
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/summary", null);
 
         response.EnsureSuccessStatusCode();
         var artifact = await response.Content.ReadFromJsonAsync<AiAnalysisArtifact>();
@@ -774,6 +774,64 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains("\"scenarioName\": \"Village Food Crisis\"", provider.LastRequest.Context);
         Assert.Contains("\"name\": \"needPriorityWeight\"", provider.LastRequest.Context);
         Assert.Contains("NeedBasedAllocation:", provider.LastRequest.Context);
+    }
+
+    [Fact]
+    public async Task CreateAiSummaryReturnsProblemDetailsWhenAiIsDisabled()
+    {
+        await using var isolatedFactory = CreateIsolatedFactory();
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/summary", null);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("AI analysis is disabled.", problem.Title);
+        Assert.Equal(503, problem.Status);
+        Assert.Contains("AI analysis is not configured.", problem.Detail);
+    }
+
+    [Fact]
+    public async Task CreateAiSummaryReturnsProblemDetailsWhenContextIsOversized()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "Should not be used.",
+            [],
+            [],
+            []));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(
+            provider,
+            new PolityKit.Sim.Analysis.AiAnalysisOptions
+            {
+                Enabled = true,
+                ProviderName = provider.ProviderName,
+                MaxInputCharacters = 10
+            });
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/summary", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("AI analysis request is invalid.", problem.Title);
+        Assert.Equal(400, problem.Status);
+        Assert.Contains("AI analysis input exceeds the configured maximum of 10 characters.", problem.Detail);
+        Assert.Null(provider.LastRequest);
     }
 
     [Fact]
@@ -821,7 +879,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
             Models = ["need-based-allocation"]
         });
 
-        var response = await client.PostAsync($"/api/runs/{run.Id}/scenario-suggestions", null);
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/scenario-suggestions", null);
 
         response.EnsureSuccessStatusCode();
         var artifact = await response.Content.ReadFromJsonAsync<AiScenarioSuggestionArtifact>();
@@ -868,14 +926,14 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
 
         var response = await client.PostAsync($"/api/runs/{run.Id}/scenario-suggestions", null);
 
-        response.EnsureSuccessStatusCode();
-        var artifact = await response.Content.ReadFromJsonAsync<AiScenarioSuggestionArtifact>();
-        Assert.NotNull(artifact);
-        Assert.False(artifact.CanSave);
-        Assert.False(artifact.Validation.IsValid);
-        Assert.Contains("Scenario name is required.", artifact.Validation.Errors);
-        Assert.Contains("Scenario ticks must be greater than zero.", artifact.Validation.Errors);
-        Assert.Contains("Initial population cannot be negative.", artifact.Validation.Errors);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("AI scenario suggestion output is invalid.", problem.Title);
+        Assert.Equal(422, problem.Status);
+        Assert.Contains("Scenario name is required.", problem.Detail);
+        Assert.Contains("Scenario ticks must be greater than zero.", problem.Detail);
+        Assert.Contains("Initial population cannot be negative.", problem.Detail);
     }
 
     [Fact]
@@ -993,6 +1051,53 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateStressAnomaliesReturnsProblemDetailsForInvalidProviderOutput()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "This anomaly report references data outside the deterministic stress context.",
+            [],
+            [],
+            [],
+            new AiBatchAnomalyReport(
+                [
+                    new AiBatchAnomaly(
+                        Guid.NewGuid(),
+                        "invented-model",
+                        "invented-scenario",
+                        999,
+                        "invented-metric",
+                        12,
+                        "")
+                ])));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var request = new StressSweepRequest
+        {
+            GridName = "invalid-anomaly-grid",
+            Scenarios = ["village-food-crisis"],
+            Seeds = [111],
+            Ticks = 4,
+            Models = ["need-based-allocation"],
+            Sweep = new Dictionary<string, IReadOnlyList<double>>
+            {
+                ["needWeightMultiplier"] = [0.8]
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/runs/stress/ai/anomalies", request);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        Assert.Equal("AI anomaly output is invalid.", problem.Title);
+        Assert.Equal(422, problem.Status);
+        Assert.Contains("references unknown run ID", problem.Detail);
+        Assert.Contains("references unknown model 'invented-model'", problem.Detail);
+        Assert.Contains("must include an explanation", problem.Detail);
+    }
+
+    [Fact]
     public async Task RunSweepStressAndComparisonWorkWithoutAiConfiguration()
     {
         await using var isolatedFactory = CreateIsolatedFactory();
@@ -1061,7 +1166,9 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     [InlineData("/api/runs/{0}/events")]
     [InlineData("/api/runs/{0}/dashboard")]
     [InlineData("/api/runs/{0}/ai-summary")]
+    [InlineData("/api/runs/{0}/ai/summary")]
     [InlineData("/api/runs/{0}/scenario-suggestions")]
+    [InlineData("/api/runs/{0}/ai/scenario-suggestions")]
     [InlineData("/api/runs/{0}/ai/model-critique")]
     public async Task RunLookupEndpointsReturnNotFoundForMissingRun(string routeTemplate)
     {
@@ -1070,6 +1177,7 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         var route = string.Format(routeTemplate, Guid.NewGuid());
 
         var response = route.EndsWith("/ai-summary", StringComparison.Ordinal)
+            || route.EndsWith("/ai/summary", StringComparison.Ordinal)
             || route.EndsWith("/scenario-suggestions", StringComparison.Ordinal)
             || route.EndsWith("/model-critique", StringComparison.Ordinal)
             ? await client.PostAsync(route, null)

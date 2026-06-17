@@ -560,7 +560,7 @@ API run, sweep, stress, and comparison responses include `aiAnalysis`. By defaul
 
 The shared analysis layer includes an optional provider abstraction with local disabled mode. By default AI analysis returns `AI analysis is not configured.` without requiring any provider package or sending run data externally.
 
-For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai-summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/scenario-suggestions` to generate a validated scenario suggestion draft, `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique, or `POST /api/runs/stress/ai/anomalies` with a stress request body to generate advisory anomaly candidates from the resulting stress summary.
+For local examples and tests, configure `AiAnalysis:Enabled=true` and `AiAnalysis:ProviderName=fake`, then call `POST /api/runs/{id}/ai/summary` to generate an advisory run-summary artifact for a stored run, `POST /api/runs/{id}/ai/scenario-suggestions` to generate a validated scenario suggestion draft, `POST /api/runs/{id}/ai/model-critique?model=regulated-market` to generate an advisory model critique, or `POST /api/runs/stress/ai/anomalies` with a stress request body to generate advisory anomaly candidates from the resulting stress summary. The older `POST /api/runs/{id}/ai-summary` and `POST /api/runs/{id}/scenario-suggestions` aliases remain available for compatibility.
 
 See [AI boundaries and safety](docs/politykit/ai-boundaries.md) for the optional-AI rule, advisory-output rule, provenance shape, provider guardrails, and privacy note for data sent to external providers.
 
@@ -578,8 +578,8 @@ GET  /api/runs/{id}
 GET  /api/runs/{id}/metrics
 GET  /api/runs/{id}/events
 GET  /api/runs/{id}/dashboard
-POST /api/runs/{id}/ai-summary
-POST /api/runs/{id}/scenario-suggestions
+POST /api/runs/{id}/ai/summary
+POST /api/runs/{id}/ai/scenario-suggestions
 POST /api/runs/{id}/ai/model-critique
 POST /api/runs/{id}/rerun
 GET  /api/runs/{id}/compare/{comparisonId}

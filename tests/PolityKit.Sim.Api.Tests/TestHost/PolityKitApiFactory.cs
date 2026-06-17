@@ -22,7 +22,8 @@ public static class PolityKitApiFactory
 
     public static WebApplicationFactory<Program> WithAiProvider(
         this WebApplicationFactory<Program> factory,
-        IAiAnalysisProvider provider)
+        IAiAnalysisProvider provider,
+        AiAnalysisOptions? options = null)
     {
         return factory.WithWebHostBuilder(builder =>
         {
@@ -31,7 +32,7 @@ public static class PolityKitApiFactory
                 services.RemoveAll<IAiAnalysisProvider>();
                 services.RemoveAll<AiAnalysisService>();
                 services.AddSingleton(provider);
-                services.AddSingleton(new AiAnalysisService(provider, new AiAnalysisOptions
+                services.AddSingleton(new AiAnalysisService(provider, options ?? new AiAnalysisOptions
                 {
                     Enabled = true,
                     ProviderName = provider.ProviderName
