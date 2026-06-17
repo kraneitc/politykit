@@ -28,6 +28,21 @@ Charterfall is the first playable vertical slice for the Constitutional Survival
 6. **Continue**
    Carry a compact inquiry summary, prior run IDs, and the selected charter into the next crisis.
 
+## Core Loop Diagram
+
+```mermaid
+flowchart LR
+    Draft["Draft charter clauses"]
+    Forecast["Forecast risks and resources"]
+    Crisis["Resolve crisis through PolityKit"]
+    Inquiry["Inspect metrics, events, harms, and collapse signals"]
+    Amend["Amend charter"]
+    Compare["Rerun or compare outcomes"]
+    Advance["Advance to next crisis"]
+
+    Draft --> Forecast --> Crisis --> Inquiry --> Amend --> Compare --> Advance --> Forecast
+```
+
 ## Intended Feel
 
 Charterfall should feel compact, legible, replayable, and consequence-focused. The player should understand what they chose, what happened, who was helped or harmed, and why a revision might matter. Failure should invite inquiry rather than punishment.
