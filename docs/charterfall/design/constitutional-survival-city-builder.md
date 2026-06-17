@@ -70,3 +70,21 @@ PolityKit should stay responsible for deterministic simulation facts. The game l
 | Citizens | Structured citizen, household, group, or district outcomes when needed | Biographies, testimony, story cards, life-history presentation |
 | Timeline branching | Stored configurations, deterministic reruns, comparison inputs | Checkpoints, branch ancestry, player-facing counterfactual UI |
 | AI | Optional advisory artifacts only | Do not treat AI text as authoritative simulation data |
+
+## 7. Non-Goals For The First Slice
+
+Milestone 1 should prove the institutional loop before it tries to become the full city builder. The first Charterfall slice is not expected to build:
+
+- Full spatial construction.
+- Full save/load.
+- Deep population simulation.
+- Procedural narrative campaigns.
+- Full district simulation.
+- Real-time city management.
+- Multiplayer.
+- Historical or real-world scenario simulation.
+- A universal score proving one institution is best.
+- Persistent citizen life simulation.
+- Arbitrary rewind or tick-by-tick timeline branching.
+
+Citizen stories in the first slice can be lightweight story cards grounded in run outputs. Timeline comparison can start with same-seed reruns or clearly defined decision points. The deeper versions, including persistent citizen histories and broad counterfactual branching, belong to later milestones after the core loop is playable.
