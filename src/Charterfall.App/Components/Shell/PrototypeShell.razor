@@ -1,0 +1,291 @@
+@inject ICharterfallSessionStore SessionStore
+@inject IPrototypeContentProvider ContentProvider
+@inject IPolityKitRunClient RunClient
+@inject IPlayerMessageFormatter Messages
+@inject NavigationManager Navigation
+
+<section class="prototype-shell">
+    <header class="shell-header">
+        <div>
+            <p class="eyebrow">Chapter @Session.ChapterNumber / @Content.Crisis.Name</p>
+            <h1>@StageTitle</h1>
+            <p>@StageSummary</p>
+        </div>
+        <div class="run-state">
+            <span>@Content.Crisis.IntegrationStatus</span>
+            <strong>@(Session.IsBusy ? "Resolving" : "Ready")</strong>
+        </div>
+    </header>
+
+    <div class="shell-grid">
+        <main class="state-panel" aria-live="polite">
+            <div class="panel-heading">
+                <span>@Content.Settlement.Name</span>
+                <strong>@Content.Crisis.Name</strong>
+            </div>
+
+            @switch (Stage)
+            {
+                case CharterfallStage.Draft:
+                    <section>
+                        <h2>Draft civic response</h2>
+                        <p>@Content.Settlement.Premise</p>
+                        <div class="clause-list">
+                            @foreach (var clause in Content.Clauses)
+                            {
+                                <label class="clause-row">
+                                    <input type="checkbox" checked="@Session.SelectedClauseIds.Contains(clause.Id)" @onchange="() => ToggleClause(clause.Id)" />
+                                    <span>
+                                        <strong>@clause.Name</strong>
+                                        <small>@clause.Description</small>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </section>
+                    break;
+                case CharterfallStage.Inquiry:
+                    <section>
+                        <h2>Public inquiry dashboard</h2>
+                        <p>@InquiryCopy</p>
+                        <div class="metric-grid">
+                            @foreach (var metric in Content.Metrics)
+                            {
+                                <div class="metric-card">
+                                    <span>@metric.Name</span>
+                                    <strong>Pending</strong>
+                                </div>
+                            }
+                        </div>
+                    </section>
+                    break;
+                case CharterfallStage.Amendment:
+                    <section>
+                        <h2>Amend charter</h2>
+                        <p>Adjust the selected clause set after inquiry. This prototype keeps the same Greywater crisis assumptions visible for a later same-seed rerun.</p>
+                        <div class="draft-summary">
+                            <span>Selected clauses</span>
+                            <strong>@SelectedClauseSummary</strong>
+                        </div>
+                    </section>
+                    break;
+                case CharterfallStage.Comparison:
+                    <section>
+                        <h2>Compare runs</h2>
+                        <p>Original and amended outcomes will appear here once rerun and comparison endpoints are wired. Placeholder records remain visibly separate from authoritative PolityKit data.</p>
+                        <div class="comparison-strip">
+                            <div>
+                                <span>Original</span>
+                                <strong>@RunLabel("Original")</strong>
+                            </div>
+                            <div>
+                                <span>Amended</span>
+                                <strong>@RunLabel("Amended")</strong>
+                            </div>
+                        </div>
+                    </section>
+                    break;
+                case CharterfallStage.Outcome:
+                    <section>
+                        <h2>Final outcome</h2>
+                        <p>Greywater Compact reaches a provisional chapter outcome. Campaign advance, chapter 2, and chapter 3 carryover remain pending future slices.</p>
+                        <div class="draft-summary">
+                            <span>Continuation run</span>
+                            <strong>@(Session.SelectedContinuationRunId ?? "Not selected")</strong>
+                        </div>
+                    </section>
+                    break;
+            }
+
+            <div class="action-bar">
+                @if (BackTarget is not null)
+                {
+                    <button type="button" class="secondary-action" @onclick="GoBack">Back</button>
+                }
+                <button type="button" class="primary-action" @onclick="PrimaryActionAsync" disabled="@Session.IsBusy">@PrimaryActionText</button>
+            </div>
+        </main>
+
+        <aside class="support-column">
+            <section class="support-panel">
+                <h2>Assumptions</h2>
+                <dl>
+                    <div><dt>Settlement</dt><dd>@Content.Settlement.Name</dd></div>
+                    <div><dt>Scenario</dt><dd>@Content.Crisis.ScenarioId</dd></div>
+                    <div><dt>Seed</dt><dd>@Content.Crisis.Seed</dd></div>
+                    <div><dt>Ticks</dt><dd>@Content.Crisis.Ticks</dd></div>
+                    <div><dt>Model preset</dt><dd>@Content.Crisis.ModelPreset</dd></div>
+                </dl>
+                <p class="boundary">@Content.ClaimsBoundary</p>
+            </section>
+
+            <section class="support-panel">
+                <h2>Run history</h2>
+                @if (Session.RunHistory.Count == 0)
+                {
+                    <p class="empty-state">No runs have been created yet. Resolve the draft to create the first placeholder record.</p>
+                }
+                else
+                {
+                    <ol class="run-list">
+                        @foreach (var run in Session.RunHistory)
+                        {
+                            <li>
+                                <strong>@run.Label</strong>
+                                <span>@run.RunId</span>
+                                <small>@run.Status</small>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+
+            <section class="status-panel">
+                <h2>Status</h2>
+                @if (Session.IsBusy)
+                {
+                    <p class="loading-state">Resolving placeholder state...</p>
+                }
+                @if (Session.LastError is not null)
+                {
+                    <p class="error-state">@Session.LastError</p>
+                }
+                <p class="pending-state">@Messages.IntegrationPending()</p>
+            </section>
+        </aside>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public CharterfallStage Stage { get; set; }
+
+    private CharterfallSession Session => SessionStore.Current;
+
+    private PrototypeContent Content => ContentProvider.GetInitialContent();
+
+    private string StageTitle => Stage switch
+    {
+        CharterfallStage.Draft => "Draft",
+        CharterfallStage.Inquiry => "Inquiry",
+        CharterfallStage.Amendment => "Amendment",
+        CharterfallStage.Comparison => "Comparison",
+        CharterfallStage.Outcome => "Final Outcome",
+        _ => "Draft"
+    };
+
+    private string StageSummary => Stage switch
+    {
+        CharterfallStage.Draft => "Choose the first charter posture for Greywater Compact before resolving the failed harvest.",
+        CharterfallStage.Inquiry => "Review where dashboard metrics, event timelines, and bounded conclusions will appear.",
+        CharterfallStage.Amendment => "Prepare a same-seed charter adjustment after the inquiry.",
+        CharterfallStage.Comparison => "Compare original and amended records while keeping placeholder state explicit.",
+        CharterfallStage.Outcome => "Choose what carries forward once chapter progression exists.",
+        _ => string.Empty
+    };
+
+    private string InquiryCopy => Session.AuthoritativeRunIds.Count == 0
+        ? "Empty inquiry: no dashboard response exists yet."
+        : "Dashboard metrics are reserved for deterministic PolityKit output. The values below are placeholders.";
+
+    private string SelectedClauseSummary => Session.SelectedClauseIds.Count == 0
+        ? "No player-facing clauses selected"
+        : string.Join(", ", Session.SelectedClauseIds);
+
+    private string PrimaryActionText => Stage switch
+    {
+        CharterfallStage.Draft => "Resolve Crisis",
+        CharterfallStage.Inquiry => "Open Amendment",
+        CharterfallStage.Amendment => "Create Amended Placeholder",
+        CharterfallStage.Comparison => "Accept Current Run",
+        CharterfallStage.Outcome => "Restart Draft",
+        _ => "Continue"
+    };
+
+    private string? BackTarget => Stage switch
+    {
+        CharterfallStage.Draft => null,
+        CharterfallStage.Inquiry => "draft",
+        CharterfallStage.Amendment => "inquiry",
+        CharterfallStage.Comparison => "amend",
+        CharterfallStage.Outcome => "compare",
+        _ => null
+    };
+
+    protected override void OnParametersSet()
+    {
+        SessionStore.ClearError();
+
+        if (Stage == CharterfallStage.Inquiry)
+        {
+            Session.HasViewedInquiry = true;
+            if (Session.RunHistory.Count == 0)
+            {
+                SessionStore.SetError(Messages.MissingRunForInquiry());
+            }
+        }
+
+        if (Stage == CharterfallStage.Comparison && Session.RunHistory.Count(run => run.Label == "Amended") == 0)
+        {
+            SessionStore.SetError(Messages.MissingAmendedRunForComparison());
+        }
+    }
+
+    private void ToggleClause(string clauseId)
+    {
+        if (!Session.SelectedClauseIds.Remove(clauseId))
+        {
+            Session.SelectedClauseIds.Add(clauseId);
+        }
+    }
+
+    private async Task PrimaryActionAsync()
+    {
+        SessionStore.ClearError();
+
+        switch (Stage)
+        {
+            case CharterfallStage.Draft:
+                await AddRunAsync("Original");
+                Navigation.NavigateTo("inquiry");
+                break;
+            case CharterfallStage.Inquiry:
+                Session.HasViewedInquiry = true;
+                Navigation.NavigateTo("amend");
+                break;
+            case CharterfallStage.Amendment:
+                await AddRunAsync("Amended");
+                Navigation.NavigateTo("compare");
+                break;
+            case CharterfallStage.Comparison:
+                Session.SelectedContinuationRunId = Session.RunHistory.LastOrDefault()?.RunId;
+                Navigation.NavigateTo("outcome");
+                break;
+            case CharterfallStage.Outcome:
+                Navigation.NavigateTo("draft");
+                break;
+        }
+    }
+
+    private async Task AddRunAsync(string label)
+    {
+        Session.IsBusy = true;
+        var run = await RunClient.CreatePlaceholderRunAsync(label, Content.Crisis);
+        Session.RunHistory.RemoveAll(existing => existing.Label == label);
+        Session.RunHistory.Add(run);
+        Session.AuthoritativeRunIds.Remove(run.RunId);
+        Session.CompactInquirySummary = "Placeholder inquiry summary pending deterministic dashboard data.";
+        Session.IsBusy = false;
+    }
+
+    private void GoBack()
+    {
+        if (BackTarget is not null)
+        {
+            Navigation.NavigateTo(BackTarget);
+        }
+    }
+
+    private string RunLabel(string label) =>
+        Session.RunHistory.FirstOrDefault(run => run.Label == label)?.RunId ?? "Pending";
+}
