@@ -49,6 +49,81 @@ Several clauses should also create power incentives: tempting shortcuts that hel
 | `emergency.renewable` | Emergency powers | Renewable Emergency Powers | Emergency powers can be extended after review. | Can preserve flexibility, but risks becoming normal policy. | `game-layer-only` until emergency-power model inputs exist. | Adds renewal decision copy between crises. | Deferred for campaign structure. | Fictional crisis rule only. |
 | `emergency.broad` | Emergency powers | Broad Emergency Powers | Crisis leaders can bypass most ordinary checks during acute danger. | Can move quickly, but risks abuse, exclusion, and legitimacy loss. | `game-layer-only` until emergency-power model inputs exist. | Adds concentrated-power reactions and future abuse-risk copy. | Deferred simulation effect. | Fictional crisis rule, not endorsement. |
 
+## Clause-To-PolityKit Mapping
+
+This table maps the first Charterfall clause surface to existing PolityKit surfaces. A prototype developer should be able to construct a `POST /api/runs` request from any `run-model` entry. `preset-dimension` and `game-layer-only` entries remain player-facing design surfaces until a composition contract exists.
+
+| Game concept | Charterfall clause IDs | PolityKit surface | Prototype use | Notes |
+|---|---|---|---|---|
+| Need-based allocation | `allocation.need_based` | `need-based-allocation` model | Set `models: ["need-based-allocation"]`. | Existing baseline model. Default parameters: `needPriorityWeight=1.0`, `vulnerabilityPriorityWeight=0.5`. |
+| Market-based allocation | `allocation.market_based` | `market-based-allocation` model | Set `models: ["market-based-allocation"]`. | Existing baseline model. Use for fast, low-administration allocation comparisons. |
+| Hierarchy-based allocation | `allocation.hierarchy_based` | `hierarchy-based-allocation` model | Set `models: ["hierarchy-based-allocation"]`. | Existing baseline model. Use for rank- or authority-weighted access comparisons. |
+| Composite governance bundle | Preset-backed clause groups | `CompositeGovernance:<preset-id>` or preset alias | Set `models: ["participatory-commons"]`, `["regulated-market"]`, or `["technocratic-administration"]`; API resolves to composite models. | Use current preset manifests as source of truth. Do not freely mix dimensions until composition exists. |
+| Participatory commons | `allocation.participatory`, `authority.council`, `transparency.public_ledger`, `accountability.citizen_review`, `accountability.appeal_board` | `CompositeGovernance:participatory-commons` | Candidate first charter preset or comparison model. | Maps to participatory assembly, transparent feedback, recall/audit, community review, and need-weighted rationing. |
+| Regulated market | `allocation.hybrid`, `allocation.market_based`, `transparency.public_ledger`, `accountability.audit_office`, `accountability.appeal_board` | `CompositeGovernance:regulated-market` | Candidate first charter preset or comparison model. | Maps to market-price weighting, public reporting, oversight audit, and formal regulatory appeal. |
+| Technocratic administration | `allocation.hybrid`, `authority.expert_office`, `transparency.public_ledger`, `accountability.audit_office`, `accountability.appeal_board` | `CompositeGovernance:technocratic-administration` | Candidate first charter preset or comparison model. | Maps to need-and-risk scoring, professional administration, transparent indicators, oversight audit, and formal review. |
+| Council authority | `authority.council` | Preset dimension value such as `DecisionAuthority=participatory-assembly` | Presentation-only unless a preset is selected. | Use as player-facing explanation for participatory presets until custom profile composition exists. |
+| Expert office | `authority.expert_office` | `DecisionAuthority=bureau-technocratic-administration` | Presentation-only unless a preset is selected. | Use as player-facing explanation for technocratic presets. |
+| Local districts | `authority.local_districts` | `DecisionAuthority=local-federated-delegation` | Presentation-only unless `mutual-aid-federation` or a future district preset is selected. | Candidate later preset; not part of the recommended first three preset options. |
+| Emergency executive | `authority.emergency_executive` | No direct model input yet. | `game-layer-only`. | Can drive copy, badges, or power-incentive hooks; do not send as a model parameter yet. |
+| Public ledger | `transparency.public_ledger` | `InformationFlow=transparent-local-feedback` or `transparent-indicator-reporting` | Presentation-only unless a preset is selected. | Use to explain transparency-heavy presets and inquiry UI. |
+| Delayed reporting | `transparency.delayed_reporting` | No direct model input yet. | `game-layer-only`. | Can drive opacity copy or delayed inquiry reveal; do not alter deterministic results yet. |
+| Closed administration | `transparency.closed_administration` | `InformationFlow=opaque-restricted-information` | Presentation-only unless `patronage-hierarchy` or a future closed preset is selected. | Candidate later preset; useful for opacity and trust tradeoffs. |
+| Appeal board | `accountability.appeal_board` | `AppealProcess=formal-community-review`, `formal-regulatory-appeal`, or `formal-administrative-review` | Presentation-only unless a preset is selected. | Choose the exact appeal value from the selected preset manifest. |
+| Audit office | `accountability.audit_office` | `AccountabilityMechanism=oversight-audit` or `state-audit` | Presentation-only unless a preset is selected. | Use current preset manifests for exact value and administrative-load effects. |
+| Citizen review | `accountability.citizen_review` | `AccountabilityMechanism=recall-and-audit` or `peer-recall-and-audit` | Presentation-only unless a preset is selected. | Good fit for participatory or mutual-aid presets. |
+| No formal review | `accountability.none` | Closest existing value: `AccountabilityMechanism=weak-informal-accountability`; direct none value deferred. | Presentation-only unless a suitable preset is selected. | Keep wording clear that no direct `none` model value exists yet. |
+| Emergency powers | `emergency.none`, `emergency.limited`, `emergency.renewable`, `emergency.broad` | No direct model input yet. | `game-layer-only`. | Candidate future model parameter, scenario modifier, or campaign carryover rule. |
+| Food crisis | Scenario selection | `village-food-crisis` or `examples/village-food-crisis.json` | Set `scenario: "village-food-crisis"` for first prototype runs. | Existing built-in scenario and example file. |
+| Medicine crisis | Scenario selection | `examples/medicine-shortage.json` | Scenario authoring/selection surface. | Present in example stress docs; use if suitable for Charterfall content pack. |
+| Corruption pressure | Scenario selection | `examples/corruption-stress.json` | Scenario authoring/selection surface. | Good first pressure test for transparency, accountability, and power incentives. |
+| Same-seed amendment | Run operation | `POST /api/runs/{id}/rerun` | Use after the player changes clauses following inquiry. | Rerun should preserve starting conditions unless the player deliberately changes seed/scenario. |
+| Before/after view | Run operation | `GET /api/runs/{id}/compare/{comparisonId}` | Use after rerun or branch comparison. | Present deltas as "changed under this run," not proof of superiority. |
+| Public inquiry dashboard | Run operation | `GET /api/runs/{id}/dashboard` | Source for summary metrics, events, and event timeline. | Game layer turns deterministic outputs into inquiry UI and citizen story cards. |
+| Robustness preview | Run operation | `POST /api/runs/stress` | Milestone 3+ by default. | Can become advanced prototype mode after the core loop is stable. |
+
+### Run Construction Rules
+
+- Prefer existing model IDs and governance preset IDs for Milestone 1.
+- Do not invent UI clauses that imply simulation effects before the mapping exists.
+- If a clause is presentation-only, mark it as `game-layer-only` and keep it out of the PolityKit run configuration.
+- If a clause maps to a parameter, record the exact parameter name, default value, allowed range, and why the range is game-safe before exposing player tuning.
+- If multiple clauses affect the same PolityKit parameter, define precedence before implementation.
+- If a player selects a baseline allocation clause plus additional UI-only clauses, send only the baseline model and approved parameters to PolityKit; persist the other clauses in game-layer campaign state.
+- If a player selects a preset-backed charter, send the preset ID or `CompositeGovernance:<preset-id>` model to PolityKit and display the preset's dimensions as explanatory clauses.
+
+### Prototype Request Examples
+
+Baseline allocation run:
+
+```json
+{
+  "scenario": "village-food-crisis",
+  "models": [
+    "need-based-allocation"
+  ],
+  "seed": 20260616,
+  "ticks": 60,
+  "parameters": {
+    "needPriorityWeight": 1.0,
+    "vulnerabilityPriorityWeight": 0.5
+  }
+}
+```
+
+Preset-backed charter run:
+
+```json
+{
+  "scenario": "village-food-crisis",
+  "models": [
+    "participatory-commons"
+  ],
+  "seed": 20260616,
+  "ticks": 60
+}
+```
+
 ## Power-Incentive Hooks
 
 | Incentive pressure | Example triggers | Short-term player benefit | Long-term risk to surface |
