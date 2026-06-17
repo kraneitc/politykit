@@ -16,7 +16,27 @@ public sealed record CrisisCard(
     bool IsIntegrationAvailable,
     string IntegrationStatus);
 
-public sealed record CharterClause(string Id, string Name, string Description, bool IsAuthoritativeCandidate);
+public sealed record CharterClauseDefinition(
+    string Id,
+    string Dimension,
+    string DisplayName,
+    string Description,
+    string Tradeoff,
+    string MappingStatus,
+    string? ModelId,
+    IReadOnlyDictionary<string, double> Parameters,
+    IReadOnlyList<string> GameLayerEffects,
+    string Availability,
+    string Boundary,
+    IReadOnlyList<string> PowerIncentiveTags);
+
+public sealed record CharterRunInputPreview(
+    IReadOnlyList<string> Models,
+    IReadOnlyDictionary<string, double> Parameters,
+    IReadOnlyList<string> GameLayerOnlyClauses,
+    IReadOnlyList<string> PresetDimensionClauses);
+
+public sealed record ClauseSelectionValidationResult(bool IsValid, IReadOnlyList<string> Errors);
 
 public sealed record MetricPlaceholder(string Id, string Name);
 
@@ -33,6 +53,6 @@ public sealed record PrototypeContent(
     SettlementProfile Settlement,
     CrisisCard Crisis,
     IReadOnlyList<CrisisCard> CampaignCrises,
-    IReadOnlyList<CharterClause> Clauses,
+    IReadOnlyList<CharterClauseDefinition> Clauses,
     IReadOnlyList<MetricPlaceholder> Metrics,
     string ClaimsBoundary);

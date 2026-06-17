@@ -11,4 +11,10 @@ public interface ICharterfallSessionStore
     void SetError(string message);
 
     void SelectCrisis(CrisisCard crisis);
+
+    void UpdateClauseSelection(
+        IReadOnlyList<string> selectedClauseIds,
+        CharterRunInputPreview preview,
+        ClauseSelectionValidationResult validation,
+        IReadOnlyList<CharterClauseDefinition> selectedClauses);
 }

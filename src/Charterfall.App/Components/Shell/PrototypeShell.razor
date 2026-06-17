@@ -61,18 +61,67 @@
                                 }
                             }
                         </div>
-                        <div class="clause-list">
-                            @foreach (var clause in Content.Clauses)
+                        <section class="charter-draft">
+                            <div class="section-heading">
+                                <h2>Charter clauses</h2>
+                                <p>Choose one simulation-active allocation method. Other first-pass clauses stay visible as preset-backed or presentation-only Charterfall state.</p>
+                            </div>
+                            @foreach (var dimension in ClauseDimensions)
                             {
-                                <label class="clause-row">
-                                    <input type="checkbox" checked="@Session.SelectedClauseIds.Contains(clause.Id)" @onchange="() => ToggleClause(clause.Id)" />
-                                    <span>
-                                        <strong>@clause.Name</strong>
-                                        <small>@clause.Description</small>
-                                    </span>
-                                </label>
+                                var clauses = ContentProvider.GetClausesForDimension(dimension.Key);
+                                <div class="clause-group">
+                                    <div>
+                                        <h3>@dimension.Value</h3>
+                                        @if (dimension.Key == "allocation_method")
+                                        {
+                                            <small>Required simulation-active choice</small>
+                                        }
+                                        else
+                                        {
+                                            <small>Stored for presentation, preset explanation, or later composition</small>
+                                        }
+                                    </div>
+                                    <div class="clause-list">
+                                        @foreach (var clause in clauses)
+                                        {
+                                            var isSelected = Session.SelectedClauseIds.Contains(clause.Id);
+                                            <button type="button"
+                                                    class="clause-card @(isSelected ? "selected" : string.Empty)"
+                                                    @onclick="() => SelectClause(clause)">
+                                                <span>@MappingStatusLabel(clause)</span>
+                                                <strong>@clause.DisplayName</strong>
+                                                <small>@clause.Description</small>
+                                                <em>@clause.Tradeoff</em>
+                                                <b>@clause.Boundary</b>
+                                                @if (clause.MappingStatus == "game-layer-only")
+                                                {
+                                                    <small>This clause affects Charterfall presentation and campaign notes in this prototype. It is not yet a PolityKit simulation input.</small>
+                                                }
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
                             }
-                        </div>
+                            @if (ClauseValidation.Errors.Count > 0)
+                            {
+                                <div class="error-state clause-errors">
+                                    @foreach (var error in ClauseValidation.Errors)
+                                    {
+                                        <p>@error</p>
+                                    }
+                                </div>
+                            }
+                            <div class="run-preview">
+                                <div>
+                                    <span>Selected charter</span>
+                                    <strong>@SelectedClauseSummary</strong>
+                                </div>
+                                <div>
+                                    <span>Run input preview</span>
+                                    <pre>@RunInputPreviewJson</pre>
+                                </div>
+                            </div>
+                        </section>
                     </section>
                     break;
                 case CharterfallStage.Inquiry:
@@ -147,6 +196,7 @@
                     <div><dt>Seed</dt><dd>@ActiveCrisis.Seed</dd></div>
                     <div><dt>Ticks</dt><dd>@ActiveCrisis.Ticks</dd></div>
                     <div><dt>Chapter</dt><dd>@ActiveCrisis.ChapterNumber of @CampaignCrises.Count</dd></div>
+                    <div><dt>Charter</dt><dd>@SelectedClauseSummary</dd></div>
                 </dl>
                 @if (!ActiveCrisis.IsIntegrationAvailable)
                 {
@@ -202,9 +252,23 @@
 
     private IReadOnlyList<CrisisCard> CampaignCrises => ContentProvider.GetCampaignCrises();
 
+    private IReadOnlyDictionary<string, string> ClauseDimensions { get; } = new Dictionary<string, string>
+    {
+        ["allocation_method"] = "Allocation method",
+        ["transparency"] = "Transparency",
+        ["accountability"] = "Accountability",
+        ["emergency_powers"] = "Emergency powers"
+    };
+
     private CrisisCard ActiveCrisis =>
         ContentProvider.FindCrisis(Session.ActiveCrisisId)
         ?? ContentProvider.GetActiveCrisis(Session.ChapterNumber);
+
+    private CharterRunInputPreview ClausePreview =>
+        ContentProvider.BuildRunInputPreview(Session.SelectedClauseIds);
+
+    private ClauseSelectionValidationResult ClauseValidation =>
+        ContentProvider.ValidateClauseSelection(Session.SelectedClauseIds);
 
     private string StageTitle => Stage switch
     {
@@ -232,7 +296,31 @@
 
     private string SelectedClauseSummary => Session.SelectedClauseIds.Count == 0
         ? "No player-facing clauses selected"
-        : string.Join(", ", Session.SelectedClauseIds);
+        : string.Join(", ", Session.SelectedClauseIds
+            .Select(ContentProvider.FindClause)
+            .OfType<CharterClauseDefinition>()
+            .Select(clause => clause.DisplayName));
+
+    private string RunInputPreviewJson
+    {
+        get
+        {
+            var models = string.Join(", ", ClausePreview.Models.Select(model => $"\"{model}\""));
+            var parameters = ClausePreview.Parameters.Count == 0
+                ? string.Empty
+                : string.Join(",\n    ", ClausePreview.Parameters.Select(parameter => $"\"{parameter.Key}\": {parameter.Value:0.0}"));
+            var gameLayerOnly = string.Join(", ", ClausePreview.GameLayerOnlyClauses.Select(id => $"\"{id}\""));
+            var presetDimensions = string.Join(", ", ClausePreview.PresetDimensionClauses.Select(id => $"\"{id}\""));
+
+            return "{\n"
+                + $"  \"models\": [{models}],\n"
+                + "  \"parameters\": {"
+                + (parameters.Length == 0 ? "},\n" : $"\n    {parameters}\n  }},\n")
+                + $"  \"presetDimensionClauses\": [{presetDimensions}],\n"
+                + $"  \"gameLayerOnlyClauses\": [{gameLayerOnly}]\n"
+                + "}";
+        }
+    }
 
     private string PrimaryActionText => Stage switch
     {
@@ -300,13 +388,47 @@
         }
     }
 
-    private void ToggleClause(string clauseId)
+    private void SelectClause(CharterClauseDefinition clause)
     {
-        if (!Session.SelectedClauseIds.Remove(clauseId))
+        var selected = Session.SelectedClauseIds.ToList();
+        if (clause.Dimension == "allocation_method")
         {
-            Session.SelectedClauseIds.Add(clauseId);
+            selected.RemoveAll(id => ContentProvider.FindClause(id)?.Dimension == "allocation_method");
+            selected.Add(clause.Id);
         }
+        else if (selected.Contains(clause.Id))
+        {
+            selected.Remove(clause.Id);
+        }
+        else
+        {
+            selected.RemoveAll(id => ContentProvider.FindClause(id)?.Dimension == clause.Dimension);
+            selected.Add(clause.Id);
+        }
+
+        SyncClauseSelection(selected);
     }
+
+    private void SyncClauseSelection(IReadOnlyList<string>? selectedClauseIds = null)
+    {
+        var selected = (selectedClauseIds ?? Session.SelectedClauseIds).ToArray();
+        var preview = ContentProvider.BuildRunInputPreview(selected);
+        var validation = ContentProvider.ValidateClauseSelection(selected);
+        var selectedClauses = selected
+            .Select(ContentProvider.FindClause)
+            .OfType<CharterClauseDefinition>()
+            .ToArray();
+
+        SessionStore.UpdateClauseSelection(selected, preview, validation, selectedClauses);
+    }
+
+    private static string MappingStatusLabel(CharterClauseDefinition clause) => clause.MappingStatus switch
+    {
+        "run-model" => "Simulation-active",
+        "preset-dimension" => "Preset-backed explanation",
+        "game-layer-only" => "Presentation-only",
+        _ => clause.MappingStatus
+    };
 
     private async Task PrimaryActionAsync()
     {
@@ -315,6 +437,12 @@
         switch (Stage)
         {
             case CharterfallStage.Draft:
+                SyncClauseSelection();
+                if (!ClauseValidation.IsValid)
+                {
+                    SessionStore.SetError(string.Join(" ", ClauseValidation.Errors));
+                    return;
+                }
                 await AddRunAsync("Original");
                 Navigation.NavigateTo("inquiry");
                 break;

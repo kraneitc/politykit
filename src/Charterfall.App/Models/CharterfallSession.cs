@@ -16,7 +16,28 @@ public sealed class CharterfallSession
 
     public string AssumptionsSummary { get; set; } = "Greywater Compact / Failed Harvest / village-food-crisis / seed 12345 / 120 ticks";
 
-    public List<string> SelectedClauseIds { get; } = ["allocation.need_based"];
+    public List<string> SelectedClauseIds { get; } =
+    [
+        "allocation.need_based",
+        "transparency.public_ledger",
+        "accountability.appeal_board",
+        "emergency.none"
+    ];
+
+    public List<string> AuthoritativeModelIds { get; } = ["need-based-allocation"];
+
+    public Dictionary<string, double> AuthoritativeParameters { get; } = new()
+    {
+        ["needPriorityWeight"] = 1.0,
+        ["vulnerabilityPriorityWeight"] = 0.5
+    };
+
+    public List<string> GameLayerClauseIds { get; } = ["emergency.none"];
+
+    public List<string> ClauseSelectionErrors { get; } = [];
+
+    public string CharterSummary { get; set; } =
+        "Need-Based Allocation, Public Ledger, Appeal Board, No Emergency Powers";
 
     public List<string> AuthoritativeRunIds { get; } = [];
 

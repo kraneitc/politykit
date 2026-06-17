@@ -11,4 +11,14 @@ public interface IPrototypeContentProvider
     CrisisCard GetActiveCrisis(int chapterNumber);
 
     CrisisCard? FindCrisis(string crisisId);
+
+    IReadOnlyList<CharterClauseDefinition> GetClauses();
+
+    IReadOnlyList<CharterClauseDefinition> GetClausesForDimension(string dimension);
+
+    CharterClauseDefinition? FindClause(string clauseId);
+
+    CharterRunInputPreview BuildRunInputPreview(IReadOnlyList<string> selectedClauseIds);
+
+    ClauseSelectionValidationResult ValidateClauseSelection(IReadOnlyList<string> selectedClauseIds);
 }

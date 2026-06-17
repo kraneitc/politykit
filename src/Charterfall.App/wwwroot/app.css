@@ -197,6 +197,119 @@ p {
     gap: 12px;
 }
 
+.charter-draft {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.section-heading {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+}
+
+.section-heading p {
+    margin-bottom: 0;
+    color: var(--muted);
+}
+
+.clause-group {
+    display: grid;
+    gap: 10px;
+}
+
+.clause-group h3 {
+    margin: 0;
+    font-size: 0.98rem;
+}
+
+.clause-group small {
+    color: var(--muted);
+}
+
+.clause-card {
+    display: grid;
+    gap: 7px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+    padding: 14px;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+}
+
+.clause-card.selected {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 2px rgba(45, 111, 95, 0.18);
+}
+
+.clause-card span,
+.clause-card small,
+.clause-card em,
+.clause-card b {
+    display: block;
+}
+
+.clause-card span {
+    width: fit-content;
+    border: 1px solid #d8c58d;
+    border-radius: 999px;
+    background: var(--soft-amber);
+    padding: 3px 8px;
+    color: var(--warning);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.clause-card em {
+    color: var(--muted);
+    font-style: normal;
+}
+
+.clause-card b {
+    color: var(--accent-strong);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.run-preview {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 12px;
+}
+
+.run-preview > div {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfa;
+    padding: 14px;
+}
+
+.run-preview span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.86rem;
+}
+
+.run-preview pre {
+    max-width: 100%;
+    margin: 6px 0 0;
+    overflow-x: auto;
+    color: #24362e;
+    font-family: Consolas, "Liberation Mono", monospace;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+}
+
+.clause-errors p {
+    margin-bottom: 4px;
+}
+
+.clause-errors p:last-child {
+    margin-bottom: 0;
+}
+
 .active-crisis {
     margin-bottom: 14px;
     border: 1px solid #c9ddcf;
@@ -450,6 +563,10 @@ dd {
     }
 
     .scenario-list {
+        grid-template-columns: 1fr;
+    }
+
+    .run-preview {
         grid-template-columns: 1fr;
     }
 }

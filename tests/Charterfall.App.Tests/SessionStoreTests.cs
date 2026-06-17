@@ -17,6 +17,9 @@ public sealed class SessionStoreTests
         Assert.Equal(120, store.Current.Ticks);
         Assert.Contains("Failed Harvest", store.Current.AssumptionsSummary);
         Assert.Contains("allocation.need_based", store.Current.SelectedClauseIds);
+        Assert.Contains("need-based-allocation", store.Current.AuthoritativeModelIds);
+        Assert.Contains("emergency.none", store.Current.GameLayerClauseIds);
+        Assert.Contains("Need-Based Allocation", store.Current.CharterSummary);
         Assert.Empty(store.Current.AuthoritativeRunIds);
         Assert.Null(store.Current.SelectedContinuationRunId);
         Assert.Null(store.Current.LastError);
@@ -53,5 +56,46 @@ public sealed class SessionStoreTests
         Assert.Equal(12345, store.Current.Seed);
         Assert.Equal(120, store.Current.Ticks);
         Assert.Equal("Greywater Compact / Failed Harvest / village-food-crisis / seed 12345 / 120 ticks", store.Current.AssumptionsSummary);
+    }
+
+    [Fact]
+    public void UpdateClauseSelection_PersistsSelectedIdsIndependentlyFromDerivedPreview()
+    {
+        var store = new InMemoryCharterfallSessionStore();
+        var provider = new PrototypeContentProvider();
+        var selectedIds = new[] { "allocation.market_based", "emergency.limited" };
+        var preview = provider.BuildRunInputPreview(selectedIds);
+        var validation = provider.ValidateClauseSelection(selectedIds);
+        var selectedClauses = selectedIds
+            .Select(provider.FindClause)
+            .OfType<Charterfall.App.Models.CharterClauseDefinition>()
+            .ToArray();
+
+        store.UpdateClauseSelection(selectedIds, preview, validation, selectedClauses);
+
+        Assert.Equal(selectedIds, store.Current.SelectedClauseIds);
+        Assert.Equal(["market-based-allocation"], store.Current.AuthoritativeModelIds);
+        Assert.Equal(["emergency.limited"], store.Current.GameLayerClauseIds);
+        Assert.Contains("Market-Based Allocation", store.Current.CharterSummary);
+        Assert.Empty(store.Current.ClauseSelectionErrors);
+    }
+
+    [Fact]
+    public void UpdateClauseSelection_CanReuseCurrentSelectedClauseListWithoutClearingSelection()
+    {
+        var store = new InMemoryCharterfallSessionStore();
+        var provider = new PrototypeContentProvider();
+        var preview = provider.BuildRunInputPreview(store.Current.SelectedClauseIds);
+        var validation = provider.ValidateClauseSelection(store.Current.SelectedClauseIds);
+        var selectedClauses = store.Current.SelectedClauseIds
+            .Select(provider.FindClause)
+            .OfType<Charterfall.App.Models.CharterClauseDefinition>()
+            .ToArray();
+
+        store.UpdateClauseSelection(store.Current.SelectedClauseIds, preview, validation, selectedClauses);
+
+        Assert.Contains("allocation.need_based", store.Current.SelectedClauseIds);
+        Assert.Contains("need-based-allocation", store.Current.AuthoritativeModelIds);
+        Assert.Empty(store.Current.ClauseSelectionErrors);
     }
 }

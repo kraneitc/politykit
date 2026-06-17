@@ -28,3 +28,7 @@ The Draft view shows the fixed Milestone 1 Greywater Compact crisis order:
 3. Supply Office Scandal
 
 Chapter 1 is unlocked by default. Future chapters are visible as campaign cards but locked until campaign progression is wired in a later slice.
+
+## Charter Clause Selection
+
+The Draft view lets the player choose one simulation-active allocation method and a small set of preset-backed or presentation-only clauses. The run input preview shows the future PolityKit model IDs and parameters separately from Charterfall-only clause IDs.

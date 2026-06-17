@@ -26,4 +26,38 @@ public sealed class InMemoryCharterfallSessionStore : ICharterfallSessionStore
         Current.AssumptionsSummary =
             $"Greywater Compact / {crisis.DisplayName} / {crisis.PolityKitScenario} / seed {crisis.Seed} / {crisis.Ticks} ticks";
     }
+
+    public void UpdateClauseSelection(
+        IReadOnlyList<string> selectedClauseIds,
+        CharterRunInputPreview preview,
+        ClauseSelectionValidationResult validation,
+        IReadOnlyList<CharterClauseDefinition> selectedClauses)
+    {
+        var selectedClauseSnapshot = selectedClauseIds.ToArray();
+        var modelSnapshot = preview.Models.ToArray();
+        var gameLayerSnapshot = preview.GameLayerOnlyClauses.ToArray();
+        var errorSnapshot = validation.Errors.ToArray();
+
+        Current.SelectedClauseIds.Clear();
+        Current.SelectedClauseIds.AddRange(selectedClauseSnapshot);
+
+        Current.AuthoritativeModelIds.Clear();
+        Current.AuthoritativeModelIds.AddRange(modelSnapshot);
+
+        Current.AuthoritativeParameters.Clear();
+        foreach (var parameter in preview.Parameters)
+        {
+            Current.AuthoritativeParameters[parameter.Key] = parameter.Value;
+        }
+
+        Current.GameLayerClauseIds.Clear();
+        Current.GameLayerClauseIds.AddRange(gameLayerSnapshot);
+
+        Current.ClauseSelectionErrors.Clear();
+        Current.ClauseSelectionErrors.AddRange(errorSnapshot);
+
+        Current.CharterSummary = selectedClauses.Count == 0
+            ? "No charter clauses selected"
+            : string.Join(", ", selectedClauses.Select(clause => clause.DisplayName));
+    }
 }
