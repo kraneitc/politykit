@@ -4,6 +4,8 @@ This catalog defines the first player-facing charter surface for Charterfall. It
 
 Milestone 1 can start with one selected model or preset per run, then grow toward composed charters. Until a clause-composition contract exists, options marked `game-layer-only` can appear in the UI, tutorial, inquiry copy, and campaign state, but should not be sent as simulation effects.
 
+Several clauses should also create power incentives: tempting shortcuts that help the player survive a crisis while raising later civic risk. These incentives should be framed through concrete pressures such as precedent, opacity, capture, accountability debt, and legitimacy strain, not through a flat good/evil score.
+
 ## Prototype Dimensions
 
 | Dimension | First playable options | Player-facing question |
@@ -46,6 +48,18 @@ Milestone 1 can start with one selected model or preset per run, then grow towar
 | `emergency.limited` | Emergency powers | Limited Emergency Powers | A narrow set of procedures can be bypassed for one crisis response. | Can address urgent danger, but may create accountability pressure. | `game-layer-only` until emergency-power model inputs exist. | Enables one authored emergency beat or badge. | First run as UI clause. | Fictional crisis rule only. |
 | `emergency.renewable` | Emergency powers | Renewable Emergency Powers | Emergency powers can be extended after review. | Can preserve flexibility, but risks becoming normal policy. | `game-layer-only` until emergency-power model inputs exist. | Adds renewal decision copy between crises. | Deferred for campaign structure. | Fictional crisis rule only. |
 | `emergency.broad` | Emergency powers | Broad Emergency Powers | Crisis leaders can bypass most ordinary checks during acute danger. | Can move quickly, but risks abuse, exclusion, and legitimacy loss. | `game-layer-only` until emergency-power model inputs exist. | Adds concentrated-power reactions and future abuse-risk copy. | Deferred simulation effect. | Fictional crisis rule, not endorsement. |
+
+## Power-Incentive Hooks
+
+| Incentive pressure | Example triggers | Short-term player benefit | Long-term risk to surface |
+|---|---|---|---|
+| Precedent | `emergency.limited`, `emergency.renewable`, `emergency.broad`, `authority.emergency_executive` | Faster action, fewer blocked decisions, simpler crisis resolution. | Exceptions become normal, future bypasses face less resistance, accountability weakens. |
+| Opacity | `transparency.delayed_reporting`, `transparency.closed_administration` | Lower immediate panic, lower reporting burden, cleaner short-term public inquiry. | Hidden harms, rumor, weaker diagnosis, delayed correction. |
+| Capture | `allocation.hierarchy_based`, faction-favored scenario choices, future patronage clauses | Access to resources, stability, labor, or political support. | Powerful groups become harder to refuse and low-power citizens become easier to ignore. |
+| Accountability debt | `accountability.none`, narrowed appeal access, ignored audit findings | Faster decisions and lower administrative load. | Unresolved harms accumulate and later legitimacy costs become sharper. |
+| Metric gaming | Any clause combination optimized only for visible thresholds | Easier wins against displayed metrics. | Severe individual stories, hidden district harms, or brittle institutions emerge later. |
+
+Milestone 1 can expose these hooks through inquiry copy and outcome badges before they become full simulation state. For example, using broad emergency power can add a "precedent set" inquiry note even if the deterministic run only reflects the selected model or preset.
 
 ## First Prototype Guidance
 
@@ -93,3 +107,4 @@ Do not send game-layer-only clauses to PolityKit as if they were authoritative m
 - Which non-allocation clauses should become simulation inputs first?
 - Should emergency powers be a model parameter, a scenario modifier, or a game-layer campaign rule?
 - How should multiple clauses that affect administrative load compose without hiding tradeoffs from the player?
+- Which power-incentive pressures should be visible in Milestone 1, and which should remain implied until campaign carryover exists?

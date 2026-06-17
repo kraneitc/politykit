@@ -24,6 +24,7 @@ The game should make institutional tradeoffs legible through play:
 - Local autonomy can improve responsiveness while making coordination harder.
 - Market-like allocation can move resources quickly while leaving vulnerable citizens exposed.
 - Participatory systems can improve fairness while struggling under time pressure.
+- Controlled information, faction favors, narrowed appeals, and emergency exceptions can make the next crisis easier while creating precedent, opacity, capture, accountability debt, or legitimacy strain.
 
 The game should avoid claiming that one real-world system is universally best. It should frame every outcome as the result of declared assumptions, scenario conditions, and model behavior.
 
@@ -41,7 +42,7 @@ You are not simply the mayor. You are the founder, steward, or constitutional ar
    The player manages districts, resources, infrastructure, citizens, services, and ecological constraints.
 
 2. **Playable institutions**
-   The player drafts and amends rules for allocation, authority, transparency, accountability, appeals, local autonomy, and emergency power.
+   The player drafts and amends rules for allocation, authority, transparency, accountability, appeals, local autonomy, and emergency power. Some rules should tempt expedient control while creating inspectable civic risk.
 
 3. **Crisis-driven simulation**
    Seasons, disasters, shortages, corruption events, migration, housing loss, public health needs, and supply breakdowns test the system.
@@ -216,6 +217,7 @@ Deliverables:
 - Inspectable household or citizen summaries for selected crisis outcomes.
 - Crisis cards.
 - Clause cards with clear tradeoffs.
+- Power-incentive hooks for emergency powers, opacity, faction pressure, and weakened accountability.
 - Public inquiry screen after each crisis.
 - Run history.
 - Outcome badges for collapse, recovery, fairness, trust, and administrative burden.
@@ -227,6 +229,7 @@ Acceptance:
 - A player can inspect at least one citizen or household story and trace it back to simulation events.
 - The UI invites experimentation rather than punishing failure.
 - The player can distinguish metrics, events, and narrative interpretation.
+- The player can see when a useful shortcut creates later civic risk.
 
 ### Milestone 3: Systems Depth
 
@@ -239,6 +242,7 @@ Deliverables:
 - Multi-crisis consequences carried between chapters.
 - Faction pressure and legitimacy effects.
 - Counterfactual branch design for restarting from selected inquiry or amendment points.
+- Carryover pressure tracks for precedent, opacity, capture, accountability debt, and legitimacy strain.
 - Stress test mode.
 - Sensitivity report view.
 - Challenge scenarios with scoring constraints.

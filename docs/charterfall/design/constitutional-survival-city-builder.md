@@ -12,6 +12,8 @@ Crises turn those institutions into lived consequences. A shortage, disaster, sc
 
 The game should center the human story behind those systems. When the player inspects a citizen, household, or district, they should be able to see a life shaped by the charter: where that person lives, what they need, who depends on them, what happened to them during a crisis, and which institutional choice helped, harmed, delayed, or ignored them. Metrics explain the scale of a consequence; life stories explain its meaning.
 
+The game should also make the temptations of power playable. The player should not be asked to choose between clean good and obvious evil; they should face useful shortcuts that solve real problems while quietly weakening accountability. Emergency exceptions, delayed disclosure, faction favors, narrowed appeals, and metric gaming can all help the settlement survive the next crisis, but they can also create precedent, opacity, capture, accountability debt, and legitimacy strain.
+
 ## 3. Core Loop
 
 ```text
@@ -38,7 +40,7 @@ In the north-star game, "try again" can eventually include counterfactual timeli
    The long-term game should make the settlement legible as a place under pressure. Citizens, districts, homes, services, resource flows, infrastructure, and ecological constraints should be visible enough that institutional outcomes feel grounded in lived conditions rather than abstract scores alone.
 
 2. **Playable institutions**
-   The player should draft and amend rules for allocation, authority, transparency, accountability, appeals, local autonomy, and emergency power. These rules are the central tools of play: they should be understandable as civic choices, mapped to simulation behavior, and exposed through player-facing language rather than hidden model switches.
+   The player should draft and amend rules for allocation, authority, transparency, accountability, appeals, local autonomy, and emergency power. These rules are the central tools of play: they should be understandable as civic choices, mapped to simulation behavior, and exposed through player-facing language rather than hidden model switches. Some rules should create expedient incentives that are genuinely useful in a crisis but increase long-term civic risk.
 
 3. **Crisis-driven simulation**
    Seasons, disasters, shortages, corruption events, migration, housing loss, public health needs, and supply breakdowns should test the system. A crisis should pressure both the settlement's material capacity and its civic design, revealing how the charter behaves when ordinary administration is not enough.
@@ -48,6 +50,20 @@ In the north-star game, "try again" can eventually include counterfactual timeli
 
 5. **Revision over optimization**
    Failure should be informative. The game should reward learning, amendment, reruns, stress tests, comparison, and eventually counterfactual timeline branches rather than a single universal best answer. The player is not solving politics once; they are studying how a declared institutional design behaves under declared assumptions.
+
+## Power Incentives
+
+Charterfall should make civic drift feel practical before it feels sinister. The player may use temporary authority, controlled information, patronage bargains, or narrowed review because the settlement is hungry, sick, afraid, or running out of time. Those choices should have understandable benefits and inspectable costs.
+
+Suggested pressure tracks:
+
+- **Precedent**: emergency exceptions become easier to repeat.
+- **Opacity**: delayed or closed reporting makes failure harder to diagnose.
+- **Capture**: powerful factions, offices, or districts become harder to refuse.
+- **Accountability debt**: unresolved appeals, audits, or harms accumulate.
+- **Legitimacy strain**: citizens doubt that the rules still apply fairly.
+
+These pressures should not function as a simple morality meter. They should help the player see how a settlement can survive materially while its institutions become less answerable to the people they govern.
 
 ## 5. Scope Distinction
 
