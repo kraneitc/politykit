@@ -835,6 +835,47 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
     }
 
     [Fact]
+    public async Task CreateAiSummaryDoesNotChangeStoredRunDetail()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "This advisory summary should not mutate the stored deterministic run.",
+            [],
+            [],
+            []));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"],
+            Parameters = new Dictionary<string, double>
+            {
+                ["needPriorityWeight"] = 2.0
+            }
+        });
+        var before = await client.GetFromJsonAsync<RunDetailResponse>($"/api/runs/{run.Id}");
+
+        var aiResponse = await client.PostAsync($"/api/runs/{run.Id}/ai/summary", null);
+        aiResponse.EnsureSuccessStatusCode();
+        var after = await client.GetFromJsonAsync<RunDetailResponse>($"/api/runs/{run.Id}");
+
+        Assert.NotNull(before);
+        Assert.NotNull(after);
+        Assert.Equal(before.Id, after.Id);
+        Assert.Equal(before.CreatedAt, after.CreatedAt);
+        Assert.Equal(before.ScenarioName, after.ScenarioName);
+        Assert.Equal(before.Seed, after.Seed);
+        Assert.Equal(before.Ticks, after.Ticks);
+        Assert.Equal(before.Models.Select(model => model.ModelName), after.Models.Select(model => model.ModelName));
+        Assert.Equal(
+            before.Models.SelectMany(model => model.FinalMetrics).Select(metric => (metric.Model, metric.Name, metric.Tick, metric.Value, metric.Unit)),
+            after.Models.SelectMany(model => model.FinalMetrics).Select(metric => (metric.Model, metric.Name, metric.Tick, metric.Value, metric.Unit)));
+        AssertAiNotUsed(after.AiAnalysis);
+    }
+
+    [Fact]
     public async Task CreateScenarioSuggestionReturnsValidatedDraft()
     {
         var provider = new RecordingAiProvider(new AiAnalysisResult(
@@ -989,6 +1030,58 @@ public sealed class RunsEndpointTests(WebApplicationFactory<Program> factory)
         Assert.Contains("\"sourceType\": \"model-critique\"", provider.LastRequest.Context);
         Assert.Contains("\"governanceDimensions\"", provider.LastRequest.Context);
         Assert.Contains("not proof that a model is correct or incorrect", provider.LastRequest.Context);
+    }
+
+    [Fact]
+    public async Task CreateModelCritiqueUsesProviderAndSelectedBaselineManifest()
+    {
+        var provider = new RecordingAiProvider(new AiAnalysisResult(
+            AiAnalysisStatus.Succeeded,
+            "Review this baseline model critique as advisory feedback.",
+            [],
+            ["fake warning"],
+            ["PolityKit.Sim.Cli ai-critique-model --run runs/example --model need-based-allocation --provider fake"],
+            new AiModelCritique(
+                [
+                    new AiModelCritiqueItem(
+                        "Need priority assumption",
+                        "Need-based allocation depends on simplified prioritization weights.",
+                        ["Model manifest assumptions"])
+                ],
+                [
+                    new AiModelCritiqueItem(
+                        "Scarcity response",
+                        "Final metrics should be checked against shortage events.",
+                        ["Needs Met final metric"])
+                ],
+                ["Run a parameter sweep around needPriorityWeight."],
+                ["Document which assumptions were directly exercised by the run."])));
+        await using var isolatedFactory = CreateIsolatedFactory().WithAiProvider(provider);
+        var client = isolatedFactory.CreateClient();
+        var run = await CreateRunAsync(client, new CreateRunRequest
+        {
+            Scenario = "village-food-crisis",
+            Ticks = 5,
+            Models = ["need-based-allocation"]
+        });
+
+        var response = await client.PostAsync($"/api/runs/{run.Id}/ai/model-critique?model=need-based-allocation", null);
+
+        response.EnsureSuccessStatusCode();
+        var artifact = await response.Content.ReadFromJsonAsync<AiModelCritiqueArtifact>();
+        Assert.NotNull(artifact);
+        Assert.Equal(AiAnalysisKind.ModelCritique, artifact.Analysis.Kind);
+        Assert.True(artifact.Analysis.AiAnalysis.Used);
+        Assert.Equal([run.Id], artifact.Analysis.AiAnalysis.InputRunIds);
+        Assert.Equal(["NeedBasedAllocation"], artifact.Analysis.AiAnalysis.ModelNames);
+        Assert.Equal(["Village Food Crisis"], artifact.Analysis.AiAnalysis.ScenarioNames);
+        Assert.Equal([12345], artifact.Analysis.AiAnalysis.Seeds);
+        Assert.NotNull(artifact.Critique);
+        Assert.NotEmpty(artifact.Critique.AssumptionRisks);
+        Assert.NotNull(provider.LastRequest);
+        Assert.Equal(AiAnalysisKind.ModelCritique, provider.LastRequest.Kind);
+        Assert.Contains("\"sourceType\": \"model-critique\"", provider.LastRequest.Context);
+        Assert.Contains("NeedBasedAllocation", provider.LastRequest.Context);
     }
 
     [Fact]
