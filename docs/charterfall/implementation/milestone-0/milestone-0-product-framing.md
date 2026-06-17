@@ -338,18 +338,20 @@ Definition of done:
 
 Create or update these artifacts during Milestone 0:
 
-| Artifact | Suggested path | Required before Milestone 1? |
-|---|---|---:|
-| Game design brief | `docs/charterfall/design/constitutional-survival-city-builder.md` | Yes |
-| Charterfall pitch | `docs/charterfall/design/charterfall-pitch.md` | Yes |
-| Core loop diagram | In pitch or design brief | Yes |
-| Clause catalog | `docs/charterfall/design/clauses.md` or JSON later | Yes |
-| Clause mapping table | In clause catalog | Yes |
-| First content pack | `docs/charterfall/design/first-content-pack.md` | Yes |
-| Framing and claims boundary | `docs/charterfall/design/framing-boundaries.md` | Yes |
-| Prototype API contract | `docs/charterfall/implementation/prototype-contract.md` | Helpful before code |
+| Artifact | Suggested path | Required before Milestone 1? | Verified status |
+|---|---|---:|---|
+| Game design brief | `docs/charterfall/design/constitutional-survival-city-builder.md` | Yes | Verified 2026-06-17 |
+| Charterfall pitch | `docs/charterfall/design/charterfall-pitch.md` | Yes | Verified 2026-06-17 |
+| Core loop diagram | In pitch or design brief | Yes | Verified in pitch |
+| Clause catalog | `docs/charterfall/design/clauses.md` or JSON later | Yes | Verified 2026-06-17 |
+| Clause mapping table | In clause catalog | Yes | Verified in clause catalog |
+| Player-facing metrics | `docs/charterfall/design/player-facing-metrics.md` | Yes | Verified 2026-06-17 |
+| First content pack | `docs/charterfall/design/first-content-pack.md` | Yes | Verified 2026-06-17 |
+| Win, fail, and carryover rules | `docs/charterfall/design/win-fail-carryover.md` | Yes | Verified 2026-06-17 |
+| Framing and claims boundary | `docs/charterfall/design/framing-boundaries.md` | Yes | Verified 2026-06-17 |
+| Prototype API contract | `docs/charterfall/implementation/prototype-contract.md` | Helpful before code | Verified 2026-06-17 |
 
-These paths are recommendations. If the repository chooses a different documentation structure, keep the artifact names and cross-links stable.
+These paths are recommendations. If the repository chooses a different documentation structure, keep the artifact names and cross-links stable. Verification status records that the artifact exists and covers the milestone requirement; it does not imply that later implementation work is complete.
 
 ## Implementation Notes For Milestone 1
 
